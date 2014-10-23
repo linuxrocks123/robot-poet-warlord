@@ -38,9 +38,11 @@ class AttackNotice
 
 enum Direction { UP, DOWN, LEFT, RIGHT };
 
+enum BuildStatus { WALL, FORT, CAPSULE, ROBOT };
+
 - Must implement Robot interface.
 - Entry point at creation is
-  Robot_Specs createRobot(WorldAPI api, int skill_points, char[] message)
+  Robot_Specs createRobot(WorldAPI api, int skill_points, byte[] message)
 - Entry point for each turn is
   void act(WorldAPI api, Robot_Status status, byte[][] received_radio,
            int[] capsules_held, GridCell[][] adjacent,
@@ -58,4 +60,14 @@ Movement:
 - void drop_capsule(GridCell adjacent_cell, int power_of_capsule);
 
 Build:
+- BuildStatus getBuildStatus()
+- GridCell getBuildTarget()
+- int getInvestedBuildPower()
+- void setBuildTarget(BuildStatus status, GridCell location)
+- void build(int power)
+- void sendCreationNotice(byte[] message)
+- void repair(int power)
+- void charge(int powe, GridCell ally)
+
+Radio:
 - 
