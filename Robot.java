@@ -6,7 +6,7 @@
 public interface Robot
 {
      /** Represents skill point allocation of Robot.*/
-     public class Robot_Specs
+     public class Robot_Specs implements Clone
      {
           /**Attack skill.*/
           public int attack;
@@ -25,7 +25,7 @@ public interface Robot
       * Represents current status of Robot, passed to Robot.act() method
       * to let robot know its current health, charge, and capsules.
       */
-     public class Robot_Status
+     public class Robot_Status implements Clone
      {
           /**current charge.*/
           public int charge;
@@ -42,6 +42,14 @@ public interface Robot
            * use getInvestedBuildPower() for that.
            */
           public int[] capsules;
+
+          /**Overrides clone: see Java language documentation for explanation*/
+          public Object clone()
+               {
+                    Robot_Status to_return = (Robot_Status)(super.clone());
+                    to_return.capsules = capsules.clone();
+                    return to_return;
+               }
      };
 
      /**Represents object located in particular GridCell.*/

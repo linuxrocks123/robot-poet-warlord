@@ -27,6 +27,7 @@ Attacks:
     down.
   - Range is (power of capsule + defense level).  No ranged penalty.
   - Attack skill is (power of capsule + attack level).
+  - Can only hold a number of capsules equal to defense skill.
 - Destroy wall/fortification: Wall has 10 health and 10 defense.  Can
   use any method to destroy wall/fortification (melee, ranged,
   capsule).
@@ -35,7 +36,7 @@ Defense:
 - Defend: Amount of power put into defense determines temporary
           increase of defense points.  Can simultaneously defend and
           attack if power is high enough.  Can't put more power into
-          attack than attack skill.
+          defense than defense skill.
 
 Move:
 - Moving one hex takes 1 power.

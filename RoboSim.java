@@ -5,6 +5,16 @@ import java.util.Random;
 import java.lang.reflect.Constructor;
 public class RoboSim
 {
+     public static class RoboSimCreationException extends Exception
+     {
+          public String player;
+          public RoboSimCreationException(String message, String player_)
+               {
+                    super(message);
+                    player = player_;
+               }
+     }
+
      private static class RobotData
      {
           public int x_pos;
@@ -24,16 +34,24 @@ public class RoboSim
      private RobotData[] turnOrder;
      private SimulatorGUI gui;
 
+     private static Robot_Specs checkSpecsValid(Robot_Specs proposed, String player, int skill_points) throws RoboSimCreationException
+          {
+               if(proposed.attack + proposed.defense + proposed.power + proposed.charge != skill_points)
+                    throw new RoboSimCreationException("Player "+player+" attempted to create invalid robot!",player);
+               return proposed;
+          }
+
      /**
       * Constructor for RoboSim:
       * @param combatants array of String objects containing the names of
       *                   the Robot classes for each combatant
       * @param initial_robots_per_combatant how many robots each team starts
       *                                     out with
+      * @param skill_points skill points per combatant
       * @param length length of arena
       * @param width width of arena
       */
-     public RoboSim(String[] combatants, int initial_robots_per_combatant, int length, int width)
+    public RoboSim(String[] combatants, int initial_robots_per_combatant, int skill_points, int length, int width) throws RoboSimCreationException
           {
                //Create grid
                for(int i=0; i<length; i++)
@@ -77,5 +95,8 @@ public class RoboSim
                          data.y_pos = y_pos;
                          data.robot = gen_robot.newInstance();
                          data.player = player;
-                         data.specs = robot.createRobot(
+                         byte[] creation_message = new byte[64];
+                         byte[1] = turnOrder_pos % 256;
+                         byte[0] = turnOrder_pos / 256;
+                         data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), player, skill_points);
 }
