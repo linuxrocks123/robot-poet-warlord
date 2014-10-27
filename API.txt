@@ -67,7 +67,12 @@ Build:
 - void build(int power)
 - void sendCreationNotice(byte[] message)
 - void repair(int power)
-- void charge(int powe, GridCell ally)
+- void charge(int power, GridCell ally)
 
 Radio:
-- 
+- byte[][] getMessages(int power)
+- void sendMessage(byte[] message, int power)
+- GridCell[][] getWorld(int power) //can return null if radio jammed
+- void scanEnemy(Robot_Specs enemySpecs, Robot_Status enemyStatus,
+                 GridCell toScan)
+- void jamRadio(int power)
