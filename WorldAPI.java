@@ -143,7 +143,7 @@ public interface WorldAPI
       *         include all messages included in simulator's call to act().
       *         May be null if no messages were received.
       */
-     byte[][] getMessages(int power);
+     /*byte[][] getMessages(int power);*/ //disabled
 
      /**
       * Sends a message to an ally or allies.
@@ -162,7 +162,7 @@ public interface WorldAPI
 
      /**
       * Gets a copy of the entire world.  Takes 3 power, plus additional if
-      * jamming is taking place.
+      * jamming is taking place (which won't be; jamming is not implemented).
       * @param power to spend attempting to get the world
       * @return a 2-dimensional array containing a GridCell for each cell in
       *         the world.  Will be null if jamming has prevented the world
@@ -186,5 +186,5 @@ public interface WorldAPI
       * everything we can out of and send everything we want into the radio.
       * @param power power to use for jamming.  Must not be more than 5.
       */
-     void jamRadio(int power);
+     /*void jamRadio(int power);*/ //disabled
 }

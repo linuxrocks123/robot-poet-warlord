@@ -33,6 +33,9 @@ public interface Robot
           /**current health.*/
           public int health;
 
+          /**current defense boost*/
+          public int defense_boost;
+
           /**
            * Current number and power of capsules.<br>
            * Each capsule is represented by an element of the array.<br>
@@ -53,7 +56,7 @@ public interface Robot
      };
 
      /**Represents object located in particular GridCell.*/
-     public enum GridObject { EMPTY, SELF, ALLY, ENEMY, WALL, FORT, CAPSULE };
+     public enum GridObject { EMPTY, BLOCKED, SELF, ALLY, ENEMY, WALL, FORT, CAPSULE };
 
      /**Represents orientation in simulator's world.*/
      public enum Direction { UP, DOWN, LEFT, RIGHT };
