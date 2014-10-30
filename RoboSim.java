@@ -6,6 +6,7 @@ import java.util.Random;
 import java.lang.reflect.Constructor;
 public class RoboSim
 {
+     /**Exception class*/
      public static class RoboSimExecutionException extends Exception
      {
           public String player;
@@ -188,9 +189,63 @@ public class RoboSim
                     return luckOfAttacker+attack-defense>=5;
                }
 
+          /**
+           * Process attack, assigning damage and deleting destroyed objects if necessary.
+           * @param attack attack skill of attacker (including bonuses/penalties)
+           * @param cell_to_attack cell attacker is attacking containing enemy or obstacle
+           */
+          private void processAttack(int attack, SimGridCell cell_to_attack)
+               {
+                    //Calculate defense skill of opponent
+                    int defense = 0;
+                    switch(cell_to_attack.contents)
+                    {
+                    case SimGridCell.GridObject.SELF:
+                         defense = cell_to_attack.occupant_data.specs.defense + cell_to_attack.occupant_data.status.defense_boost;
+                         break;
+
+                    case SimGridCell.GridObject.FORT:
+                    case SimGridCell.GridObject.WALL:
+                         defense = 10;
+                         break;
+                    }
+
+
+                    //If we hit, damage the opponent
+                    if(calculateHit(attack,defense))
+                         if(cell_to_attack.occupant_data!=null)
+                         {
+                              //we're a robot
+                              for(int i=0; true; i++)
+                                        if(turnOrder.get(i)==cell_to_attack.occupant_data.robot)
+                                             if((cell_to_attack.occupant_data.status-=power)<=0)
+                                             {
+                                                  //Handle cell
+                                                  cell_to_attack.occupant_data = null;
+                                                  cell_to_attack.contents = cell_to_attack.wallforthealth>0 ? SimGridCell.GridObject.FORT : SimGridCell.GridObject.EMPTY;
+
+                                                  //Handle turnOrder position
+                                                  turnOrder.erase(i);
+                                                  if(i<turnOrder_pos)
+                                                       turnOrder_pos--;
+
+                                                  break;
+                                             }
+                         }
+                         else
+                              if((cell_to_attack.wallforthealth-=power)<=0)
+                              {
+                                   cell_to_attack.wallforthealth = 0;
+                                   cell_to_attack.contents = SimGridCell.GridObject.EMPTY;
+                              }
+                                                  
+               }
+
           public Robot.AttackResult meleeAttack(int power, Robot.GridCell adjacent_cell) throws RoboSimExecutionException
                {
                     //Lots of error checking here (as everywhere...)
+                    if(adjacent_cell==null)
+                         throw new RoboSimExecutionException("passed null as argument to meleeAttack()");
 
                     //Check that we're using a valid amount of power
                     if(power > actingRobot.specs.power || power > actingRobot.status.charge ||
@@ -240,54 +295,67 @@ public class RoboSim
                     //Attack adds power of attack to raw skill
                     int attack = raw_attack + power;
 
-                    //Calculate defense skill of opponent
-                    int defense = 0;
+                    //Process attack
+                    processAttack(attack,cell_to_attack);
+               }
+
+          public Robot.AttackResult rangedAttack(int power, Robot.GridCell nonadjacent_cell) throws RoboSimExecutionException
+               {
+                    //Lots of error checking here (as everywhere...)
+                    if(adjacent_cell==null)
+                         throw new RoboSimExecutionException("passed null as argument to rangedAttack()");
+
+
+                    //Check that we're using a valid amount of power
+                    if(power > actingRobot.specs.power || power > actingRobot.status.charge ||
+                       power > actingRobot.specs.attack || power < 1)
+                         throw new RoboSimExecutionException("attempted ranged attack with illegal power level");
+
+                    //Does cell exist in grid?
+                    //(could put this in isAdjacent() method but want to give students more useful error messages)
+                    if(nonadjacent_cell.x_coord > worldGrid.length || nonadjacent_cell.y_coord > worldGrid[0].length ||
+                       nonadjacent_cell.x_coord < 0 || nonadjacent_cell.y_coord < 0)
+                         throw new RoboSimExecutionException("passed invalid cell coordinates to rangedAttack()",actingRobot.player,actingRobot.assoc_cell,nonadjacent_cell);
+
+                    //Are cells nonadjacent?
+                    if(isAdjacent(nonadjacent_cell))
+                         throw new RoboSimExecutionException("attempted to range attack adjacent cell with robot",actingRobot.player,actingRobot.assoc_cell);
+
+                    //Safe to use this now, checked for oob condition from student
+                    SimGridCell cell_to_attack = worldGrid[nonadjacent_cell.x_coord][nonadjacent_cell.y_coord];
+
+                    //Do we have a "clear shot"?
+
+                    //Is there an enemy, fort, or wall at the cell's location?
                     switch(cell_to_attack.contents)
                     {
+                    case SimGridCell.GridObject.EMPTY:
+                         throw new RoboSimExecutionException("attempted to attack empty cell",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.BLOCKED:
+                         throw new RoboSimExecutionException("attempted to attack blocked tile",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case SimGridCell.GridObject.SELF:
-                         defense = cell_to_attack.occupant_data.specs.defense + cell_to_attack.occupant_data.status.defense_boost;
-                         break;
-
-                    case SimGridCell.GridObject.FORT:
-                    case SimGridCell.GridObject.WALL:
-                         defense = 10;
-                         break;
+                         if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
+                              throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.GridObject.CAPSULE:
+                         throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.GridObject.ALLY:
+                         throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.meleeAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
                     }
 
+                    //Okay, if we haven't thrown an exception, the cell is valid to attack.  Perform the attack.
+                    //Update this robot's charge status.
+                    actingRobot.status.power-=power;
 
-                    //TODO: lift this into its own function, processAttack() or whatever
-                    //If we hit, damage the opponent
-                    if(calculateHit(attack,defense))
-                         if(cell_to_attack.occupant_data!=null)
-                         {
-                              //we're a robot
-                              for(int i=0; true; i++)
-                                        if(turnOrder.get(i)==cell_to_attack.occupant_data.robot)
-                                             if((cell_to_attack.occupant_data.status-=power)<=0)
-                                             {
-                                                  //Handle cell
-                                                  cell_to_attack.occupant_data = null;
-                                                  cell_to_attack.contents = cell_to_attack.wallforthealth>0 ? SimGridCell.GridObject.FORT : SimGridCell.GridObject.EMPTY;
+                    //Begin calculation of our attack power
+                    int raw_attack = actingRobot.specs.attack/2;
 
-                                                  //Handle turnOrder position
-                                                  turnOrder.erase(i);
-                                                  if(i<turnOrder_pos)
-                                                       turnOrder_pos--;
+                    //Attack adds power of attack to raw skill
+                    int attack = raw_attack + power;
 
-                                                  break;
-                                             }
-                         }
-                         else
-                              if((cell_to_attack.wallforthealth-=power)<=0)
-                              {
-                                   cell_to_attack.wallforthealth = 0;
-                                   cell_to_attack.contents = SimGridCell.GridObject.EMPTY;
-                              }
-                                                  
+                    //Process attack
+                    processAttack(attack,cell_to_attack);
                }
      }
-
-     /**Exception class 
 
      /**
       * Executes one timestep of the simulation.
