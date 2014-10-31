@@ -193,8 +193,9 @@ public class RoboSim
            * Process attack, assigning damage and deleting destroyed objects if necessary.
            * @param attack attack skill of attacker (including bonuses/penalties)
            * @param cell_to_attack cell attacker is attacking containing enemy or obstacle
+           * @param damage damage if attack hits
            */
-          private void processAttack(int attack, SimGridCell cell_to_attack)
+          private void processAttack(int attack, SimGridCell cell_to_attack, int power)
                {
                     //Calculate defense skill of opponent
                     int defense = 0;
@@ -245,7 +246,7 @@ public class RoboSim
                {
                     //Lots of error checking here (as everywhere...)
                     if(adjacent_cell==null)
-                         throw new RoboSimExecutionException("passed null as argument to meleeAttack()");
+                         throw new RoboSimExecutionException("passed null as argument to meleeAttack()",actingRobot.player);
 
                     //Check that we're using a valid amount of power
                     if(power > actingRobot.specs.power || power > actingRobot.status.charge ||
@@ -296,7 +297,7 @@ public class RoboSim
                     int attack = raw_attack + power;
 
                     //Process attack
-                    processAttack(attack,cell_to_attack);
+                    processAttack(attack,cell_to_attack,power);
                }
 
           public Robot.AttackResult rangedAttack(int power, Robot.GridCell nonadjacent_cell) throws RoboSimExecutionException
@@ -309,7 +310,7 @@ public class RoboSim
                     //Check that we're using a valid amount of power
                     if(power > actingRobot.specs.power || power > actingRobot.status.charge ||
                        power > actingRobot.specs.attack || power < 1)
-                         throw new RoboSimExecutionException("attempted ranged attack with illegal power level");
+                         throw new RoboSimExecutionException("attempted ranged attack with illegal power level",actingRobot.player);
 
                     //Does cell exist in grid?
                     //(could put this in isAdjacent() method but want to give students more useful error messages)
@@ -325,6 +326,11 @@ public class RoboSim
                     SimGridCell cell_to_attack = worldGrid[nonadjacent_cell.x_coord][nonadjacent_cell.y_coord];
 
                     //Do we have a "clear shot"?
+                    List<Robot.GridCell> shortest_path = Robot.RobotUtility.findShortestPath(actingRobot.assoc_cell,cell_to_attack,worldGrid);
+                    if(shortest_path==null) //we don't have a clear shot
+                         throw new RoboSimExecutionException("attempted to range attack cell with no clear path",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    else if(shortest_path.size()>actingRobot.specs.defense) //out of range
+                         throw new RoboSimExecutionException("attempted to range attack cell more than (defense) tiles away",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
 
                     //Is there an enemy, fort, or wall at the cell's location?
                     switch(cell_to_attack.contents)
@@ -339,7 +345,7 @@ public class RoboSim
                     case SimGridCell.GridObject.CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case SimGridCell.GridObject.ALLY:
-                         throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.meleeAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
+                         throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.rangedAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
                     }
 
                     //Okay, if we haven't thrown an exception, the cell is valid to attack.  Perform the attack.
@@ -353,7 +359,81 @@ public class RoboSim
                     int attack = raw_attack + power;
 
                     //Process attack
-                    processAttack(attack,cell_to_attack);
+                    processAttack(attack,cell_to_attack,power);
+               }
+
+          Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell)
+               {
+                    //Error checking, *sigh*...
+                    if(cell==null)
+                         throw new RoboSimExecutionException("passed null to capsuleAttack()",actingRobot.player,actingRobot.assoc_cell);
+
+                    //Does cell exist in grid?
+                    if(cell.x_coord > worldGrid.length || cell.y_coord > worldGrid[0].length || cell.x_coord < 0 || cell.y_coord < 0)
+                         throw new RoboSimExecutionException("passed invalid cell coordinates to capsuleAttack()",actingRobot.player,actingRobot.assoc_cell,cell);
+
+                    //Cell to attack
+                    GridCell cell_to_attack = worldGrid[cell.x_coord][cell.y_coord];
+
+                    //Do we have a capsule of this power rating?
+                    boolean power_valid = false;
+                    for(int x : actingRobot.status.capsules)
+                         if(x==power_of_capsule)
+                         {
+                              power_valid = true;
+                              break;
+                         }
+
+                    if(!power_valid)
+                         throw new RoboSimExecutionException("passed invalid power to capsuleAttack(): doesn't have capsule of power "+power_of_capsule,actingRobot.player,actingRobot.assoc_cell);
+
+                    //Can we use this capsule? (attack + defense >= power)
+                    if(actingRobot.specs.attack + actingRobot.specs.defense < power_of_capsule)
+                         throw new RoboSimExecutionException("attempted to use capsule of greater power than attack+defense",actingRobot.player,actingRobot.assoc_cell);
+
+                    //Can we hit the target?  Range is power of capsule + defense.
+                    if(Robot.RobotUtility.findShortestPath(actingRobot.assoc_cell,cell_to_attack,grid).length > power_of_capsule + actingRobot.specs.defense)
+                         throw new RoboSimExecutionException("target not in range",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+
+                    //Is there an enemy, fort, or wall at the cell's location?
+                    switch(cell_to_attack.contents)
+                    {
+                    case SimGridCell.GridObject.EMPTY:
+                         throw new RoboSimExecutionException("attempted to attack empty cell",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.BLOCKED:
+                         throw new RoboSimExecutionException("attempted to attack blocked tile",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.GridObject.SELF:
+                         if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
+                              throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.GridObject.CAPSULE:
+                         throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                    case SimGridCell.GridObject.ALLY:
+                         throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.capsuleAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
+                    }
+
+                    /*Okay, if we're still here, we can use the capsule.
+                      Need to delete capsule from robot status structure,
+                      but it's an array, so we can't.  This really should
+                      be a list but 1301 students don't know about Lists.
+                      Consider moving this to a method if we have to do
+                      this frequently (as in, more than just this once).
+                      I'd rather not reimplement ArrayList, but whatever.
+                    */
+                    int[] newCapsules = new int[actingRobot.status.capsules.length-1];
+                    boolean deleted_capsule = false;
+                    for(int i=0,j=0; i<actingRobot.status.capsules.length; i++,j++)
+                    {
+                         if(!deleted_capsule && actingRobot.status.capsules[i]==power_of_capsule)
+                         {
+                              deleted_capsule=true;
+                              j--;
+                              continue;
+                         }
+                         newCapsules[j]=actingRobot.status.capsules[i];
+                    }
+
+                    //Process attack
+                    processAttack(attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
                }
      }
 
