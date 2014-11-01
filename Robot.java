@@ -30,6 +30,7 @@ public interface Robot
      public class Robot_Status implements Cloneable
      {
           /**remaining power for turn*/
+          public int power;
 
           /**current charge.*/
           public int charge;
@@ -79,6 +80,9 @@ public interface Robot
 
           /**orientation of fort, if there is a fort in the cell.*/
           public Direction fort_orientation;
+
+          /**power of capsule, if there is a capsule in the cell.*/
+          public int capsule_power;
      }
 
      /**Attack type: melee, ranged, or capsule*/

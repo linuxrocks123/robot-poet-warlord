@@ -249,8 +249,7 @@ public class RoboSim
                          throw new RoboSimExecutionException("passed null as argument to meleeAttack()",actingRobot.player);
 
                     //Check that we're using a valid amount of power
-                    if(power > actingRobot.specs.power || power > actingRobot.status.charge ||
-                       power > actingRobot.specs.attack || power < 1)
+                    if(power > actingRobot.status.power || power > actingRobot.specs.attack || power < 1)
                          throw new RoboSimExecutionException("attempted melee attack with illegal power level");
 
                     //Are cells adjacent?
@@ -281,10 +280,11 @@ public class RoboSim
                     case SimGridCell.GridObject.ALLY:
                          throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.meleeAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
                     }
-
+                    
                     //Okay, if we haven't thrown an exception, the cell is valid to attack.  Perform the attack.
-                    //Update this robot's charge status.
+                    //Update this robot's charge status and power status.
                     actingRobot.status.charge-=power;
+                    actingRobot.status.power-=power;
 
                     //Begin calculation of our attack power
                     int raw_attack = actingRobot.specs.attack;
@@ -308,8 +308,7 @@ public class RoboSim
 
 
                     //Check that we're using a valid amount of power
-                    if(power > actingRobot.specs.power || power > actingRobot.status.charge ||
-                       power > actingRobot.specs.attack || power < 1)
+                    if(power > actingRobot.status.power || power > actingRobot.specs.attack || power < 1)
                          throw new RoboSimExecutionException("attempted ranged attack with illegal power level",actingRobot.player);
 
                     //Does cell exist in grid?
@@ -351,6 +350,7 @@ public class RoboSim
                     //Okay, if we haven't thrown an exception, the cell is valid to attack.  Perform the attack.
                     //Update this robot's charge status.
                     actingRobot.status.charge-=power;
+                    actingRobot.status.power-=power;
 
                     //Begin calculation of our attack power
                     int raw_attack = actingRobot.specs.attack/2;
@@ -376,15 +376,9 @@ public class RoboSim
                     GridCell cell_to_attack = worldGrid[cell.x_coord][cell.y_coord];
 
                     //Do we have a capsule of this power rating?
-                    boolean power_valid = false;
-                    for(int x : actingRobot.status.capsules)
-                         if(x==power_of_capsule)
-                         {
-                              power_valid = true;
-                              break;
-                         }
+                    int capsule_index = ArrayUtility.linearSearch(actingRobot.status.capsules,power_of_capsule);
 
-                    if(!power_valid)
+                    if(capsule_index==-1)
                          throw new RoboSimExecutionException("passed invalid power to capsuleAttack(): doesn't have capsule of power "+power_of_capsule,actingRobot.player,actingRobot.assoc_cell);
 
                     //Can we use this capsule? (attack + defense >= power)
@@ -412,13 +406,11 @@ public class RoboSim
                     }
 
                     /*Okay, if we're still here, we can use the capsule.
-                      Need to delete capsule from robot status structure,
-                      but it's an array, so we can't.  This really should
-                      be a list but 1301 students don't know about Lists.
-                      Consider moving this to a method if we have to do
-                      this frequently (as in, more than just this once).
-                      I'd rather not reimplement ArrayList, but whatever.
+                      Need to delete capsule from robot status structure.
+                      (We're using arrays here b/c of 1301).
                     */
+                    actingRobot.status.capsules = ArrayUtility.deleteElement(actingRobot.status.capsules,capsule_index);
+
                     int[] newCapsules = new int[actingRobot.status.capsules.length-1];
                     boolean deleted_capsule = false;
                     for(int i=0,j=0; i<actingRobot.status.capsules.length; i++,j++)
@@ -482,8 +474,65 @@ public class RoboSim
                                    throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
 
                     //Okay, now: do we have enough power/charge?
+                    if(steps > actingRobot.status.power)
+                         throw new RoboSimExecutionException("attempted to move too far (not enough power)",actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+
+                    //Account for power cost
+                    actingRobot.status.power-=steps;
+                    actingRobot.status.charge-=steps;
+
+                    //Change position of robot.
+                    actingRobot.assoc_cell.contents = SimGridCell.GridObject.EMPTY;
+                    actingRobot.assoc_cell.occupant_data = NULL;
+                    actingRobot.assoc_cell = worldGrid[x_coord][y_coord];
+                    actingRobot.assoc_cell.contents = SimGridCell.GridObject.SELF;
+                    actingRobot.assoc_cell.occupant_data = actingRobot;
+               }
+
+          public void pick_up_capsule(Robot.GridCell adjacent_cell)
+               {
+                    //Error checking, *sigh*...
+                    //Can't pass us null
+                    if(adjacent_cell==null)
+                         throw new RoboSimExecutionException("passed null to pick_up_capsule()",actingRobot.player,actingRobot.assoc_cell);
+
+                    //Does cell exist in grid?
+                    if(adjacent_cell.x_coord > worldGrid.length || adjacent_cell.y_coord > worldGrid[0].length || adjacent_cell.x_coord < 0 || adjacent_cell.y_coord < 0)
+                         throw new RoboSimExecutionException("passed invalid cell coordinates to pick_up_capsule()",actingRobot.player,actingRobot.assoc_cell,adjacent_cell);
+
+                    if(!isAdjacent(adjacent_cell))
+                         throw new RoboSimExecutionException("attempted to pick up capsule in nonadjacent cell",actingRobot.assoc_cell);
+
+                    //Cell in question
+                    SimGridCell gridCell = worldGrid[cell.x_coord][cell.y_coord];
+
+                    //We need at least one power.
+                    if(actingRobot.status.power==0)
+                         throw new RoboSimExecutionException("attempted to pick up capsule with no power",actingRobot.assoc_cell,gridCell);
+
+                    //Is there actually a capsule there?
+                    if(gridCell.contents!=GridCell.contents.CAPSULE)
+                         throw new RoboSimExecutionException("attempted to pick up capsule from cell with no capsule",actingRobot.assoc_cell,gridCell);
+
+                    //Do we have "room" for this capsule?
+                    if(actingRobot.status.capsules.length+1>actingRobot.specs.attack+actingRobot.specs.defense)
+                         throw new RoboSimExcecutionException("attempted to pick up too many capsules",actingRobot.assoc_cell,gridCell);
+
+                    //If still here, yes.
+
+                    //Decrement our power
+                    actingRobot.status.power--;
+
+                    //Put capsule in our inventory, delete it from world
+                    actingRobot.status.capsules = ArrayUtility.addElement(actingRobot.status.capsules,gridCell.capsule_power);
+                    gridCell.contents = SimGridCell.GridObject.EMPTY;
+                    gridCell.capsule_power = 0;
                }
      }
+
+     void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule)
+          {
+          }
 
      /**
       * Executes one timestep of the simulation.
