@@ -284,7 +284,7 @@ public class RoboSim
 
                     //Okay, if we haven't thrown an exception, the cell is valid to attack.  Perform the attack.
                     //Update this robot's charge status.
-                    actingRobot.status.power-=power;
+                    actingRobot.status.charge-=power;
 
                     //Begin calculation of our attack power
                     int raw_attack = actingRobot.specs.attack;
@@ -350,7 +350,7 @@ public class RoboSim
 
                     //Okay, if we haven't thrown an exception, the cell is valid to attack.  Perform the attack.
                     //Update this robot's charge status.
-                    actingRobot.status.power-=power;
+                    actingRobot.status.charge-=power;
 
                     //Begin calculation of our attack power
                     int raw_attack = actingRobot.specs.attack/2;
@@ -434,6 +434,54 @@ public class RoboSim
 
                     //Process attack
                     processAttack(attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
+               }
+
+          void defend(int power)
+               {
+                    //Error checking
+                    if(power < 0 || power > actingRobot.specs.defense || power > actingRobot.specs.power || power > actingRobot.status.charge)
+                         throw new RoboSimExecutionException("attemped to defend with negative power",actingRobot.assoc_cell);
+
+                    //This one's easy
+                    actingRobot.status.charge-=power;
+                    actingRobot.status.defense_boost+=power;
+               }
+
+          void move(int steps, Robot.Direction way)
+               {
+                    int x_coord = actingRobot.assoc_cell.x_coord;
+                    final int actor_x = x_coord;
+                    int y_coord = actingRobot.assoc_cell.y_coord;
+                    final int actor_y = y_coord;
+                    switch(way)
+                    {
+                    case Robot.Direction.UP:
+                         y_coord+=steps;
+                         break;
+                    case Robot.Direction.DOWN:
+                         y_coord-=steps;
+                         break;
+                    case Robot.Direction.LEFT:
+                         x_coord-=steps;
+                         break;
+                    case Robot.Direction.RIGHT:
+                         x_coord+=steps;
+                         break;
+                    }
+
+                    //Is our destination in the map?
+                    if(x_coord < 0 || x_coord > worldGrid.length || y_coord < 0 || y_coord > worldGrid[0].length)
+                         throw new RoboSimExecutionException("attempted to move out of bounds",actingRobot.assoc_cell);
+
+                    //Okay, now we have to make sure each step is empty
+                    final boolean x_left = x_coord<actor_x;
+                    final boolean y_left = y_coord<actor_y;
+                    if(x_coord!=actor_x)
+                         for(int i=(x_left ? actor_x-1 : actor_x+1); i!=x_coord; x_left ? x-- : x++)
+                              if(worldGrid[x_coord][y_coord].contents!=SimGridCell.GridObject.EMPTY)
+                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+
+                    //Okay, now: do we have enough power/charge?
                }
      }
 

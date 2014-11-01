@@ -29,6 +29,8 @@ public interface Robot
       */
      public class Robot_Status implements Cloneable
      {
+          /**remaining power for turn*/
+
           /**current charge.*/
           public int charge;
 
