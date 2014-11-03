@@ -40,6 +40,11 @@ public class RoboSim
           public Robot.Robot_Status status;
           public Robot robot;
           public String player;
+
+          //Build information
+          public BuildStatus whatBuilding;
+          public int investedPower;
+          public SimGridCell invested_assoc_cell;
      }
 
      private static class SimGridCell extends Robot.GridCell
@@ -195,8 +200,11 @@ public class RoboSim
            * @param cell_to_attack cell attacker is attacking containing enemy or obstacle
            * @param damage damage if attack hits
            */
-          private void processAttack(int attack, SimGridCell cell_to_attack, int power)
+          private Robot.AttackResult processAttack(int attack, SimGridCell cell_to_attack, int power)
                {
+                    //Holds result of attack
+                    Robot.AttackResult to_return = Robot.AttackResult.MISSED;
+
                     //Calculate defense skill of opponent
                     int defense = 0;
                     switch(cell_to_attack.contents)
@@ -214,6 +222,10 @@ public class RoboSim
 
                     //If we hit, damage the opponent
                     if(calculateHit(attack,defense))
+                    {
+                         //We hit
+                         to_return = Robot.AttackResult.HIT;
+
                          if(cell_to_attack.occupant_data!=null)
                          {
                               //we're a robot
@@ -221,6 +233,12 @@ public class RoboSim
                                         if(turnOrder.get(i)==cell_to_attack.occupant_data.robot)
                                              if((cell_to_attack.occupant_data.status-=power)<=0)
                                              {
+                                                  //We destroyed the opponent!
+                                                  to_return = Robot.AttackResult.DESTROYED_TARGET;
+
+                                                  //Handle in-progress build, reusing setBuildTarget() to handle interruption of build due to death
+                                                  (new RoboAPIImplementor(cell_to_attack.occupant_data)).setBuildTarget(null,null);
+
                                                   //Handle cell
                                                   cell_to_attack.occupant_data = null;
                                                   cell_to_attack.contents = cell_to_attack.wallforthealth>0 ? SimGridCell.GridObject.FORT : SimGridCell.GridObject.EMPTY;
@@ -236,10 +254,15 @@ public class RoboSim
                          else
                               if((cell_to_attack.wallforthealth-=power)<=0)
                               {
+                                   //We destroyed the target!
+                                   to_return = Robot.AttackResult.DESTROYED_TARGET;
+
                                    cell_to_attack.wallforthealth = 0;
                                    cell_to_attack.contents = SimGridCell.GridObject.EMPTY;
                               }
-                                                  
+                    }
+
+                    return to_return;
                }
 
           public Robot.AttackResult meleeAttack(int power, Robot.GridCell adjacent_cell) throws RoboSimExecutionException
@@ -297,7 +320,7 @@ public class RoboSim
                     int attack = raw_attack + power;
 
                     //Process attack
-                    processAttack(attack,cell_to_attack,power);
+                    return processAttack(attack,cell_to_attack,power);
                }
 
           public Robot.AttackResult rangedAttack(int power, Robot.GridCell nonadjacent_cell) throws RoboSimExecutionException
@@ -359,7 +382,7 @@ public class RoboSim
                     int attack = raw_attack + power;
 
                     //Process attack
-                    processAttack(attack,cell_to_attack,power);
+                    return processAttack(attack,cell_to_attack,power);
                }
 
           Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell)
@@ -425,7 +448,7 @@ public class RoboSim
                     }
 
                     //Process attack
-                    processAttack(attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
+                    return processAttack(attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
                }
 
           void defend(int power)
@@ -500,11 +523,12 @@ public class RoboSim
                     if(adjacent_cell.x_coord > worldGrid.length || adjacent_cell.y_coord > worldGrid[0].length || adjacent_cell.x_coord < 0 || adjacent_cell.y_coord < 0)
                          throw new RoboSimExecutionException("passed invalid cell coordinates to pick_up_capsule()",actingRobot.player,actingRobot.assoc_cell,adjacent_cell);
 
-                    if(!isAdjacent(adjacent_cell))
-                         throw new RoboSimExecutionException("attempted to pick up capsule in nonadjacent cell",actingRobot.assoc_cell);
-
                     //Cell in question
                     SimGridCell gridCell = worldGrid[cell.x_coord][cell.y_coord];
+
+                    //Cell must be adjacent
+                    if(!isAdjacent(adjacent_cell))
+                         throw new RoboSimExecutionException("attempted to pick up capsule in nonadjacent cell",actingRobot.assoc_cell,gridCell);
 
                     //We need at least one power.
                     if(actingRobot.status.power==0)
@@ -528,11 +552,57 @@ public class RoboSim
                     gridCell.contents = SimGridCell.GridObject.EMPTY;
                     gridCell.capsule_power = 0;
                }
-     }
 
      void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule)
-          {
-          }
+               {
+                    //Error checking, *sigh*...
+                    //Can't pass us null
+                    if(adjacent_cell==null)
+                         throw new RoboSimExecutionException("passed null to pick_up_capsule()",actingRobot.player,actingRobot.assoc_cell);
+
+                    //Does cell exist in grid?
+                    if(adjacent_cell.x_coord > worldGrid.length || adjacent_cell.y_coord > worldGrid[0].length || adjacent_cell.x_coord < 0 || adjacent_cell.y_coord < 0)
+                         throw new RoboSimExecutionException("passed invalid cell coordinates to pick_up_capsule()",actingRobot.player,actingRobot.assoc_cell,adjacent_cell);
+
+                    //Cell in question
+                    SimGridCell gridCell = worldGrid[cell.x_coord][cell.y_coord];
+
+                    //Cell must be adjacent
+                    if(!isAdjacent(adjacent_cell))
+                         throw new RoboSimExecutionException("attempted to pick up capsule in nonadjacent cell",actingRobot.assoc_cell,gridCell);
+
+                    //Is the cell empty?
+                    if(gridCell.contents!=SimGridCell.GridObject.EMPTY)
+                         throw new RoboSimExcecutionException("attempted to place capsule in nonempty cell",actingRobot.assoc_cell,gridCell);
+
+                    //Do we have such a capsule?
+                    int index = ArrayUtility.linearSearch(actingRobot.status.capsules,power_of_capsule);
+                    if(index==-1)
+                         throw new RoboSimExecutionException("attempted to drop capsule with power "+power_of_capsule", having no such capsule",actingRobot.assoc_cell,gridCell);
+
+                    //Okay.  We're good.  Drop the capsule
+                    gridCell.contents = SimGridCell.GridObject.CAPSULE;
+                    gridCell.capsule_power = power_of_capsule;
+
+                    //Delete it from our inventory
+                    ArrayUtility.deleteElement(actingRobot.status.capsules,index);
+               }
+
+          Robot.BuildStatus getBuildStatus()
+               {
+                    return actingRobot.whatBuilding;
+               }
+
+          Robot.GridCell getBuildTarget()
+               {
+                    return actingRobot.invested_assoc_cell;
+               }
+
+          int getInvestedBuildPower()
+               {
+                    return actingRobot.investedPower;
+               }
+     }
 
      /**
       * Executes one timestep of the simulation.

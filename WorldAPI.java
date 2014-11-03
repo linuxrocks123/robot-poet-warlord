@@ -42,6 +42,10 @@ public interface WorldAPI
       */
      void defend(int power);
 
+     /*/**********************************************
+      * Movement Methods
+      ***********************************************/
+
      /**
       * move: move robot
       * @param steps how far to move
@@ -64,7 +68,7 @@ public interface WorldAPI
      void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule);
 
      /*/**********************************************
-      * Movement Methods
+      * Construction Methods
       ***********************************************/
 
      /**
