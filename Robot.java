@@ -116,8 +116,6 @@ public interface Robot
            * path from one grid cell to another.  Cells are adjacent if they
            * are up, down, left, or right of each other.  Cells are
            * <i>not</i> adjacent if they are diagonal to one another.<br>
-           * <br>Note to 1301 students: see the list2array() method above
-           * for how to convert the List returned by this method to an Array.
            * @param origin starting grid cell
            * @param target ending grid cell
            * @param grid grid to analyze
@@ -132,7 +130,7 @@ public interface Robot
                     int y_offset = grid[0][0].y_coord;
                     
                     //Structures to efficiently handle accounting
-                    TreeMap<Integer,List<GridCell>> unvisited_nodes = new TreeMap<Integer,List<GridCell>>();
+                    TreeMap<Integer,List<GridCell>> unvisited_nodes = new TreeMap<Integer,List<GridCell>>(); //this is really a multimap
                     Map<GridCell,List<GridCell>> current_costs = new HashMap<GridCell,List<GridCell>>();
 
                     //Origin's shortest path is simply itself
@@ -173,11 +171,15 @@ public interface Robot
                          if(gridY_value!=grid[0].size()-1)
                               adjacent_nodes.add(grid[gridX_value][gridY_value+1]);
 
-                         /*Iterate over adjacent nodes, add to or updated
+                         /*Iterate over adjacent nodes, add to or update
                            entry in unvisited_nodes and current_costs if
                            necessary*/
                          for(GridCell x : adjacent_nodes)
                          {
+                              //If we're not empty, we can't be used as an adjacent cell, unless we're the target
+                              if(x.contents!=GridCell.EMPTY && x!=target)
+                                   continue;
+
                               //Generate proposed path
                               List<GridCell> x_proposed_path = (List<GridCell>)(current_path.clone());
                               x_proposed_path.add(x);
@@ -185,14 +187,14 @@ public interface Robot
                               //current least cost path
                               List<GridCell> clcp = current_costs.get(x);
 
-                              if(clcp!=null && clcp.size()-1<our_cost+1)
+                              if(clcp!=null && clcp.size()-1>our_cost+1)
                               {
                                    List<GridCell> old_unvisited = unvisited_nodes.get(clcp.size()-1);
                                    old_unvisited.removeFirstOccurrence(x);
                                    if(old_unvisited.size()==0)
                                         unvisited_nodes.remove(clcp.size()-1);
                               }
-                              else if(clcp!=null && clcp.size()-1>=our_cost+1)
+                              else if(clcp!=null && clcp.size()-1<=our_cost+1)
                                    continue;
 
                               List<GridCell> new_unvisited = unvisited_nodes.get(our_cost+1);

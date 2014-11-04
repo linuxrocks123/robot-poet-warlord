@@ -101,26 +101,35 @@ public interface WorldAPI
       * @param status what we're going to start building (or, in the case of
       *               an energy capsule, resume building)
       * @param location where to direct our building efforts.  Must be an
-      *                 adjacent, empty location.
+      *                 adjacent, empty location, or null if status=capsule.
       */
      void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location);
+
+     /**
+      * Tells the simulator the robot is beginning to build something in an
+      * adjacent cell (or, for capsules, inside itself).<br>
+      * In order to mark a capsule or robot as "done", call this method with
+      * both parameters null.  This <i>will</i> destroy any in-progress
+      * build.<br><br>
+      * Note that you must not move from your current cell while in the
+      * process of building anything other than a capsule.  If you do, you
+      * will lose any in-progress work on a wall or fort, and a robot will
+      * be automatically finalized with however many skill points you've
+      * invested up to that point.
+      * @param status what we're going to start building (or, in the case of
+      *               an energy capsule, resume building)
+      * @param location where to direct our building efforts.  Must be an
+      *                 adjacent, empty location, or null if status=capsule.
+      * @param creation_message message to send to newly created robot
+      *                         (if we're finalizing one)
+      */
+     void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] creation_message);
 
      /**@param power how much power to apply to building the current target.
       *              Must not be more than remaining power needed to finish
       *              building target.
       */
      void build(int power);
-
-     /**
-      * Sends a message to a newly created robot.<br>
-      * Call this method immediately after finishing building a new robot to
-      * give it a message about the current status of the world or direct it
-      * to allocate its skill points in a specific way.  If you do not call
-      * this method before ending your turn on a turn where you've finished
-      * constructing a robot, the robot's creation message will be all 0s.
-      * @param message 8-byte array containing the message to send
-      */
-     void sendCreationNotice(byte[] message);
 
      /**
       * Spend power to repair yourself.  2 power restores 1 health.
