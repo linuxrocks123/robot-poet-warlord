@@ -33,6 +33,35 @@ public class RoboSim
                }
      }
 
+     /**FSPPredicate derivative making use of SimGridCell-specific information*/
+     public static class SimGridAllyDeterminant : public Robot.RobotUtility.FSPPredicate
+          {
+               private Robot.GridCell origin;
+               public SimGridAllyDeterminant(Robot.GridCell origin_) { origin = origin_; }
+
+               public boolean validCell(Robot.GridCell potential_ally)
+               {
+                    if(potential_ally==origin)
+                         return false;
+
+                    switch(potential_ally.contents)
+                    {
+                    case GridObject.ALLY:
+                         return true;
+                    case GridObject.SELF:
+                         if(!(potential_ally instanceof SimGridCell) || !(origin instanceof SimGridCell))
+                              return false;
+                         SimGridCell origin_downcast = (SimGridCell)(origin);
+                         SimGridCell potential_ally_downcast = (SimGridCell)(potential_ally);
+                         if(potential_ally.occupant_data!=null &&
+                            potential_ally.occupant_data.player.equals(origin.occupant_data.player))
+                              return true;
+                    default:
+                         return false;
+                    }
+               }
+          }
+
      private static class RobotData
      {
           public SimGridCell assoc_cell;

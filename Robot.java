@@ -110,6 +110,29 @@ public interface Robot
       */
      public class RobotUtility
      {
+          /**FSPPredicate class: used internally in nearest path methods*/
+          public abstract static class FSPPredicate
+          {
+               public abstract boolean validCell(GridCell cell);
+          }
+
+          /**Find nearest neighbor:<br>
+           * Finds the nearest ally to cell, approximately as the crow flies.
+           * @param origin cell to find
+           * @param grid grid to analyze
+           * @return nearest ally, or null if we have no allies in grid
+           */
+          public static GridCell findNearestAlly(GridCell origin, GridCell[][] grid)
+               {
+                    GridCell[] path = findShortestPathInternal(origin, new RoboSim.SimGridAllyDeterminant(origin), new FSPPredicate() {
+                              public boolean validCell(GridCell cell) { return true; }}, grid);
+
+                    if(path==null)
+                         return null;
+                    else
+                         return path[path.length-1];
+               }
+
           /**Shortest path calculator:<br>
            * Finds the shortest path from one grid cell to another.<br><br>
            * This uses Dijkstra's algorithm to attempt to find the shortest
@@ -124,6 +147,23 @@ public interface Robot
            *         could be found in the given grid.
            */
           public static GridCell[] findShortestPath(GridCell origin, GridCell target, GridCell[][] grid)
+               {
+                    return findShortestPathInternal(origin,new FSPPRedicate () {
+                              public boolean validCell(GridCell maybeTarget)
+                                   {
+                                        return maybeTarget==target;
+                                   }
+                         },
+                         new FSPPredicate() {
+                              public boolean validCell(GridCell maybePassable)
+                                   {
+                                        return maybePassable.contents==GridCell.EMPTY;
+                                   }
+                         },
+                         grid);
+               }
+
+          private static GridCell[][] findShortestPathInternal(GridCell origin, FSPPredicate isTarget, FRSPPredicate isPassable, GridCell[][] grid)
                {
                     //Offsets to handle incomplete world map
                     int x_offset = grid[0][0].x_coord;
@@ -148,8 +188,8 @@ public interface Robot
                          GridCell our_cell = current_entry.getValue().pop();
                          List<GridCell> current_path = current_costs.get(our_cell);
 
-                         //If we are the destination, algorithm has finished: return our current path
-                         if(our_cell==target)
+                         //If we are a destination, algorithm has finished: return our current path
+                         if(isTarget.validCell(our_cell))
                               return current_path.toArray(new GridCell[0]);
 
                          //Erase our cost mapping from unvisited_nodes if necessary
@@ -176,8 +216,8 @@ public interface Robot
                            necessary*/
                          for(GridCell x : adjacent_nodes)
                          {
-                              //If we're not empty, we can't be used as an adjacent cell, unless we're the target
-                              if(x.contents!=GridCell.EMPTY && x!=target)
+                              //If we're not passable, we can't be used as an adjacent cell, unless we're a target
+                              if(!isPassable.validCell(x) && !isTarget.validCell(x))
                                    continue;
 
                               //Generate proposed path
