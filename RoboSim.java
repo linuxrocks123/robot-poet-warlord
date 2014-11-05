@@ -74,6 +74,9 @@ public class RoboSim
           public Robot.BuildStatus whatBuilding;
           public int investedPower;
           public SimGridCell invested_assoc_cell;
+
+          //Buffered radio messages
+          public List<byte[]> buffered_radio;
      }
 
      private static class SimGridCell extends Robot.GridCell
@@ -161,6 +164,7 @@ public class RoboSim
                          data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), player, skill_points);
                          data.status = new Robot.Robot_Status();
                          data.status.charge = data.status.health = data.specs.power*10;
+                         data.buffered_radio = new ArrayList<byte[]>();
                          turnOrder.set(turnOrder_pos++,data);
                     }
                }
@@ -690,6 +694,7 @@ public class RoboSim
                               data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), actingRobot.player, skill_points);
                               data.status = new Robot.Robot_Status();
                               data.status.charge = data.status.health = data.specs.power*10;
+                              data.bufferedRadio = new ArrayList<byte[]>();
                               turnOrder.add(data);
                          }
                          else
@@ -798,7 +803,31 @@ public class RoboSim
                     allied_cell.occupant_data.status.charge+=power;
                }
 
-          //TODO: add radio reception to RobotData, crowDistance() to calculate nearest neighbor, something to get subgrid, sanitize/clone subgrid, etc.
+          //TODO: add radio reception to RobotData, something to get subgrid, sanitize/clone subgrid, etc.
+          void sendMessage(byte[] message, int power)
+               {
+                    if(power < 0 || power > 2)
+                         throw new RoboSimExecutionException("attempted to send message with invalid power", actingRobot.player,actingRobot.assoc_cell);
+
+                    if(message.length!=64)
+                         throw new RoboSimExecutionException("attempted to send message byte array of incorrect length", actingRobot.player,actingRobot.assoc_cell);
+
+                    GridCell target = null;
+                    if(power==1)
+                    {
+                         target = Robot.findNearestAlly(origin,grid);
+                         if(target!=null)
+                         {
+                              /*There's a way to "cheat" here and set up a power-free comm channel
+                               *between two allied robots.  If you can find it ... let me know, and
+                               *you'll get extra credit :).  Additional credit for a bugfix.*/
+                              ((SimGridCell)(target)).occupant_data.buffered_radio.add(message);
+                         }
+                         return;
+                    }
+
+                    
+               }
      }
 
      /**
