@@ -874,6 +874,7 @@ public class RoboSim
                                    x.buffered_radio.add(message);
                }
 
+          //It's a wonderful day in the neighborhood...
           public Robot.GridCell[][] getVisibleNeighborhood()
                {
                     //YAY!  No parameters means NO ERROR CHECKING!  YAY!
@@ -901,6 +902,10 @@ public class RoboSim
                     //Set self to self instead of ally
                     to_return[xloc - x_left][yloc - y_up].contents=SimGridCell.GridObject.SELF;
                     return to_return;
+               }
+
+          public void scanEnemy(Robot.Robot_Specs enemySpecs, Robot.Robot_Status enemyStatus, Robot.GridCell toScan)
+               {
                }
      }
 
