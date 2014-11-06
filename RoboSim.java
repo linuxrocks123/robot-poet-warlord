@@ -35,8 +35,7 @@ public class RoboSim
 
      /**FSPPredicate derivative making use of SimGridCell-specific information*/
      public static class SimGridAllyDeterminant : public Robot.RobotUtility.FSPPredicate
-          {
-               private Robot.GridCell origin;
+          {               private Robot.GridCell origin;
                public SimGridAllyDeterminant(Robot.GridCell origin_) { origin = origin_; }
 
                public boolean validCell(Robot.GridCell potential_ally)
@@ -90,13 +89,58 @@ public class RoboSim
      private final int WALL_DEFENSE = 10;
 
      //RoboSim execution data (world grid, turn order, GUI reference, etc.)
-     private SimGrid[][] worldGrid;
+     private SimGridCell[][] worldGrid;
      private ArrayList<RobotData> turnOrder;
      private int turnOrder_pos;
      private SimulatorGUI gui;
 
      //Always good to have an RNG handy
      Random generator;
+
+     /**Helper method to retrieve a subgrid of the world grid
+      * @param x_left left x coordinate (inclusive)
+      * @param y_up smaller y coordinate (inclusive)
+      * @param x_right right x coordinate (inclusive)
+      * @param y_down larger y coordinate (inclusive)
+      * @return subgrid of the world grid (NOT copied or sanitized)
+      */
+     private SimGridCell[][] getSubGrid(int x_left, int y_up, int x_right, int y_down)
+          {
+               final int x_length = x_right - x_left + 1;
+               final int y_height = y_down - y_up + 1;
+
+               SimGridCell[][] to_return = new SimGridCell[x_length][y_height];
+               for(int i=x_left; i<=x_right; i++)
+                    for(int j=y_up; j<=y_down; j++)
+                         to_return[i-x_left][j-y_up] = worldGrid[i][j];
+          }
+
+     /**Sanitizer to create a GridCell[][] 2D array to give to client.
+      * @param simgrid SimGridCell 2D array with cells to sanitize
+      * @param player String containing player's name.  Used to create
+      *               sanitized grid as it would be seen from player's
+      *               perspective.
+      * @return sanitized grid or subgrid from player's perspective
+      */
+     private static GridCell[][] sanitizeGrid(SimGridCell[][] simgrid, String player)
+          {
+               GridCell[][] to_return = new GridCell[simgrid.length][simgrid[0].length];
+               for(int i=0; i<simgrid.length; i++)
+                    for(int j=0; j<simgrid.length; j++)
+                    {
+                         SimGridCell sanitized = simgrid[i][j].clone();
+                         if(sanitized.contents==SimGridCell.GridObject.SELF)
+                              if(sanitized.occupant_data.player.equals(player))
+                                   sanitized.contents=SimGridCell.GridObject.ALLY;
+                              else
+                                   sanitized.contents=SimGridCell.GridObject.ENEMY;
+                         sanitized.occupant_data=null;
+                         sanitized.wallforthealth=0;
+                         to_return[i][j] = sanitized;
+                    }
+
+               return to_return;
+          }
 
      private static Robot_Specs checkSpecsValid(Robot_Specs proposed, String player, int skill_points) throws RoboSimExecutionException
           {
@@ -418,7 +462,7 @@ public class RoboSim
                     return processAttack(attack,cell_to_attack,power);
                }
 
-          Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell)
+          public Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell)
                {
                     //Error checking, *sigh*...
                     if(cell==null)
@@ -484,7 +528,7 @@ public class RoboSim
                     return processAttack(attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
                }
 
-          void defend(int power)
+          public void defend(int power)
                {
                     //Error checking
                     if(power < 0 || power > actingRobot.specs.defense || power > actingRobot.specs.power || power > actingRobot.status.charge)
@@ -495,7 +539,7 @@ public class RoboSim
                     actingRobot.status.defense_boost+=power;
                }
 
-          void move(int steps, Robot.Direction way)
+          public void move(int steps, Robot.Direction way)
                {
                     int x_coord = actingRobot.assoc_cell.x_coord;
                     final int actor_x = x_coord;
@@ -586,7 +630,7 @@ public class RoboSim
                     gridCell.capsule_power = 0;
                }
 
-     void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule)
+     public void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule)
                {
                     //Error checking, *sigh*...
                     //Can't pass us null
@@ -621,17 +665,17 @@ public class RoboSim
                     ArrayUtility.deleteElement(actingRobot.status.capsules,index);
                }
 
-          Robot.BuildStatus getBuildStatus()
+          public Robot.BuildStatus getBuildStatus()
                {
                     return actingRobot.whatBuilding;
                }
 
-          Robot.GridCell getBuildTarget()
+          public cRobot.GridCell getBuildTarget()
                {
                     return actingRobot.invested_assoc_cell;
                }
 
-          int getInvestedBuildPower()
+          public int getInvestedBuildPower()
                {
                     return actingRobot.investedPower;
                }
@@ -703,12 +747,12 @@ public class RoboSim
                     }
                }
 
-          void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location)
+          public void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location)
                {
                     setBuildTarget(status,location,null);
                }
 
-          void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] message)
+          public void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] message)
                {
                     //If we're in the middle of building something, finalize it.
                     if(actingRobot.whatBuilding!=null)
@@ -753,7 +797,7 @@ public class RoboSim
                     gridCell.contents = SimGridCell.GridObject.BLOCKED;
                }
 
-          void build(int power)
+          public void build(int power)
                {
                     if(power > actingRobot.status.power || power < 0)
                          throw new RoboSimExecutionException("attempted to apply invalid power to build task",actingRobot.player,actingRobot.assoc_cell);
@@ -762,7 +806,7 @@ public class RoboSim
                     actingRobot.investedPower+=power;
                }
 
-          void repair(int power)
+          public void repair(int power)
                {
                     if(power > actingRobot.status.power || power < 0)
                          throw new RoboSimExecutionException("attempted to apply invalid power to repair task",actingRobot.player,actingRobot.assoc_cell);
@@ -771,7 +815,7 @@ public class RoboSim
                     actingRobot.status.health+=power/2;
                }
 
-          void charge(int power, Robot.GridCell ally)
+          public void charge(int power, Robot.GridCell ally)
                {
                     //Lots of error checking here (as everywhere...)
                     if(ally==null)
@@ -803,10 +847,9 @@ public class RoboSim
                     allied_cell.occupant_data.status.charge+=power;
                }
 
-          //TODO: add radio reception to RobotData, something to get subgrid, sanitize/clone subgrid, etc.
-          void sendMessage(byte[] message, int power)
+          public void sendMessage(byte[] message, int power)
                {
-                    if(power < 0 || power > 2)
+                    if(power < 1 || power > 2)
                          throw new RoboSimExecutionException("attempted to send message with invalid power", actingRobot.player,actingRobot.assoc_cell);
 
                     if(message.length!=64)
@@ -825,8 +868,39 @@ public class RoboSim
                          }
                          return;
                     }
+                    else //power==2
+                         for(RobotData x : turnOrder)
+                              if(x!=actingRobot && x.player.equals(actingRobot.player))
+                                   x.buffered_radio.add(message);
+               }
 
-                    
+          public Robot.GridCell[][] getVisibleNeighborhood()
+               {
+                    //YAY!  No parameters means NO ERROR CHECKING!  YAY!
+                    final int range = actingRobot.specs.defense;
+                    final int xloc = actingRobot.assoc_cell.x_coord;
+                    final int yloc = actingRobot.assoc_cell.y_coord;
+                    final int x_left = (xloc - range < 0) ? 0 : (xloc - range);
+                    final int x_right = (xloc + range > worldGrid.length-1) ? (worldGrid.length-1) : (xloc + range);
+                    final int y_up = (yloc - range < 0) ? 0 : (yloc - range);
+                    final int y_down = (yloc + range > worldGrid[0].length - 1) ? (worldGrid[0].length-1) : (yloc + range);
+                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(x_left,y_up,x_right,y_down));
+
+                    //Set associated cell to SELF instead of ALLY
+                    to_return[xloc - x_left][yloc - y_up].contents=SimGridCell.GridObject.SELF;
+                    return to_return;
+               }
+
+          public Robot.GridCell[][] getWorld(int power)
+               {
+                    if(power!=3)
+                         throw new RoboSimExecutionException("tried to get world with invalid power (not equal to 3)",actingRobot.player,actingRobot.assoc_cell);
+
+                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length,worldGrid[0].length));
+
+                    //Set self to self instead of ally
+                    to_return[xloc - x_left][yloc - y_up].contents=SimGridCell.GridObject.SELF;
+                    return to_return;
                }
      }
 
