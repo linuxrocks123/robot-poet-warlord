@@ -18,7 +18,7 @@ public interface WorldAPI
       * @return AttackResult indicating whether attack succeeded and/or
       *         destroyed target of attack.
       */
-     Robot.AttackResult meleeAttack(int power, Robot.GridCell adjacent_cell);
+     Robot.AttackResult meleeAttack(int power, Robot.GridCell adjacent_cell) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Ranged attack: attack nonadjacent grid cell within certain range
@@ -27,20 +27,20 @@ public interface WorldAPI
       * @return AttackResult indicating whether attack succeeded and/or
       *         destroyed target of attack.
       */
-     Robot.AttackResult rangedAttack(int power, Robot.GridCell nonadjacent_cell);
+     Robot.AttackResult rangedAttack(int power, Robot.GridCell nonadjacent_cell) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Capsule attack: attack with a capsule
       * @param power_of_capsule power of the capsule to use in the attack
       * @param cell GridCell (may be adjacent or nonadjacent) to attack
       */
-     Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell);
+     Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Defend: increase defense
       * @param power power to use for defense (may not exceed defense skill)
       */
-     void defend(int power);
+     void defend(int power) throws RoboSim.RoboSimExecutionException;
 
      /*/**********************************************
       * Movement Methods
@@ -51,21 +51,21 @@ public interface WorldAPI
       * @param steps how far to move
       * @param way which way to move
       */
-     void move(int steps, Robot.Direction way);
+     void move(int steps, Robot.Direction way) throws RoboSim.RoboSimExecutionException;
 
      /**
       * pick_up_capsule: pick up a capsule
       * @param adjacent_cell GridCell where capsule is that you want to pick
       *                      up (must be adjacent)
       */
-     void pick_up_capsule(Robot.GridCell adjacent_cell);
+     void pick_up_capsule(Robot.GridCell adjacent_cell) throws RoboSim.RoboSimExecutionException;
 
      /**
       * drop_capsule: drop a capsule (for an ally to pick up, presumably)
       * @param adjacent_cell where to drop capsule (must be adjacent)
       * @param power_of_capsule how powerful a capsule to drop
       */
-     void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule);
+     void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule) throws RoboSim.RoboSimExecutionException;
 
      /*/**********************************************
       * Construction Methods
@@ -76,16 +76,16 @@ public interface WorldAPI
       * @return BuildStatus object indicating what we're building.
       *         Is null if we're not building anything.
       */
-     Robot.BuildStatus getBuildStatus();
+     Robot.BuildStatus getBuildStatus() throws RoboSim.RoboSimExecutionException;
 
      /**@return GridCell indicating the target of our building efforts.
       *         Is null if we're not building anything.
       */
-     Robot.GridCell getBuildTarget();
+     Robot.GridCell getBuildTarget() throws RoboSim.RoboSimExecutionException;
 
      /**@return how much we've invested in our current build target.
       */
-     int getInvestedBuildPower();
+     int getInvestedBuildPower() throws RoboSim.RoboSimExecutionException;
 
      /**
       * Tells the simulator the robot is beginning to build something in an
@@ -103,7 +103,7 @@ public interface WorldAPI
       * @param location where to direct our building efforts.  Must be an
       *                 adjacent, empty location, or null if status=capsule.
       */
-     void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location);
+     void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Tells the simulator the robot is beginning to build something in an
@@ -123,26 +123,26 @@ public interface WorldAPI
       * @param creation_message message to send to newly created robot
       *                         (if we're finalizing one)
       */
-     void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] creation_message);
+     void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] creation_message) throws RoboSim.RoboSimExecutionException;
 
      /**@param power how much power to apply to building the current target.
       *              Must not be more than remaining power needed to finish
       *              building target.
       */
-     void build(int power);
+     void build(int power) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Spend power to repair yourself.  2 power restores 1 health.
       * @param power amount of power to spend on repairs.  Should be even.
       */
-     void repair(int power);
+     void repair(int power) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Spend power to charge an adjacent ally robot.  1-for-1 efficiency.
       * @param power amount of power to use for charging ally
       * @param ally cell containing ally to charge.  Must be adjacent.
       */
-     void charge(int power, Robot.GridCell ally);
+     void charge(int power, Robot.GridCell ally) throws RoboSim.RoboSimExecutionException;
 
      /*/**********************************************
       * Radio Methods
@@ -163,7 +163,7 @@ public interface WorldAPI
       * @param message 64-byte array containing message to transmit
       * @param power amount of power to use for sending message
       */
-     void sendMessage(byte[] message, int power);
+     void sendMessage(byte[] message, int power) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Gets a copy of the portion of the world visible to the robot.
@@ -171,7 +171,7 @@ public interface WorldAPI
       * @return a 2-dimensional array containing a GridCell for each cell
       *         visible to the robot.
       */
-     Robot.GridCell[][] getVisibleNeighborhood();
+     Robot.GridCell[][] getVisibleNeighborhood() throws RoboSim.RoboSimExecutionException;
 
      /**
       * Gets a copy of the entire world.  Takes 3 power, plus additional if
@@ -181,7 +181,7 @@ public interface WorldAPI
       *         the world.  Will be null if jamming has prevented the world
       *         from being retrieved.
       */
-     Robot.GridCell[][] getWorld(int power);
+     Robot.GridCell[][] getWorld(int power) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Scans an enemy (or ally), retrieving information about the robot.
@@ -191,7 +191,7 @@ public interface WorldAPI
       * @param enemyStatus empty Robot_Status object to be filled in
       * @param toScan cell containing robot we want to scan
       */
-     void scanEnemy(Robot.Robot_Specs enemySpecs, Robot.Robot_Status enemyStatus, Robot.GridCell toScan);
+     void scanEnemy(Robot.Robot_Specs enemySpecs, Robot.Robot_Status enemyStatus, Robot.GridCell toScan) throws RoboSim.RoboSimExecutionException;
 
      /**
       * Jams radio.  Affects both allies and enemies.  Also affects self, so

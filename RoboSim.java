@@ -1,7 +1,8 @@
 /**
  * RoboSim: Main simulator logic class.
  */
-import java.util.ArrayList; //1301 students: it's an array, you just use "get(i)" instead of "[i]"
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.lang.reflect.Constructor;
 public class RoboSim
@@ -26,15 +27,15 @@ public class RoboSim
                     this(message,player,cell.x_coord,cell.y_coord,cell2.x_coord,cell2.y_coord);
                }
 
-          public RoboSimExecutionException(String message, String player, int x1, int y1, int x2, int y2)
+          public RoboSimExecutionException(String message, String player_, int x1, int y1, int x2, int y2)
                {
-                    super("Player "+player_+" "+message+(x1!=-1 ? " with robot at coordinates ["+x1+"]["+y1+"]" ? "")+(x2!=-1 ? ", coordinates of invalid cell are ["+x2+"]["+y2+"]"));
+                    super("Player "+player_+" "+message+(x1!=-1 ? " with robot at coordinates ["+x1+"]["+y1+"]" : "")+(x2!=-1 ? ", coordinates of invalid cell are ["+x2+"]["+y2+"]" : ""));
                     player = player_;
                }
      }
 
      /**FSPPredicate derivative making use of SimGridCell-specific information*/
-     public static class SimGridAllyDeterminant : public Robot.RobotUtility.FSPPredicate
+     public static class SimGridAllyDeterminant extends Robot.RobotUtility.FSPPredicate
           {               private Robot.GridCell origin;
                public SimGridAllyDeterminant(Robot.GridCell origin_) { origin = origin_; }
 
@@ -45,15 +46,15 @@ public class RoboSim
 
                     switch(potential_ally.contents)
                     {
-                    case GridObject.ALLY:
+                    case ALLY:
                          return true;
-                    case GridObject.SELF:
+                    case SELF:
                          if(!(potential_ally instanceof SimGridCell) || !(origin instanceof SimGridCell))
                               return false;
                          SimGridCell origin_downcast = (SimGridCell)(origin);
                          SimGridCell potential_ally_downcast = (SimGridCell)(potential_ally);
-                         if(potential_ally.occupant_data!=null &&
-                            potential_ally.occupant_data.player.equals(origin.occupant_data.player))
+                         if(potential_ally_downcast.occupant_data!=null &&
+                            potential_ally_downcast.occupant_data.player.equals(origin_downcast.occupant_data.player))
                               return true;
                     default:
                          return false;
@@ -122,18 +123,18 @@ public class RoboSim
       *               perspective.
       * @return sanitized grid or subgrid from player's perspective
       */
-     private static GridCell[][] sanitizeGrid(SimGridCell[][] simgrid, String player)
+     private static Robot.GridCell[][] sanitizeGrid(SimGridCell[][] simgrid, String player)
           {
-               GridCell[][] to_return = new GridCell[simgrid.length][simgrid[0].length];
+               Robot.GridCell[][] to_return = new Robot.GridCell[simgrid.length][simgrid[0].length];
                for(int i=0; i<simgrid.length; i++)
                     for(int j=0; j<simgrid.length; j++)
                     {
-                         SimGridCell sanitized = simgrid[i][j].clone();
-                         if(sanitized.contents==SimGridCell.GridObject.SELF)
+                         SimGridCell sanitized = (SimGridCell)(simgrid[i][j].clone());
+                         if(sanitized.contents==Robot.GridObject.SELF)
                               if(sanitized.occupant_data.player.equals(player))
-                                   sanitized.contents=SimGridCell.GridObject.ALLY;
+                                   sanitized.contents=Robot.GridObject.ALLY;
                               else
-                                   sanitized.contents=SimGridCell.GridObject.ENEMY;
+                                   sanitized.contents=Robot.GridObject.ENEMY;
                          sanitized.occupant_data=null;
                          sanitized.wallforthealth=0;
                          to_return[i][j] = sanitized;
@@ -142,7 +143,7 @@ public class RoboSim
                return to_return;
           }
 
-     private static Robot_Specs checkSpecsValid(Robot_Specs proposed, String player, int skill_points) throws RoboSimExecutionException
+     private static Robot.Robot_Specs checkSpecsValid(Robot.Robot_Specs proposed, String player, int skill_points) throws RoboSimExecutionException
           {
                if(proposed.attack + proposed.defense + proposed.power + proposed.charge != skill_points)
                     throw new RoboSimExecutionException("attempted to create invalid robot!",player);
@@ -171,7 +172,7 @@ public class RoboSim
                          worldGrid[i][j] = new SimGridCell();
                          worldGrid[i][j].x_coord = i;
                          worldGrid[i][j].y_coord = j;
-                         worldGrid[i][j].contents = SimGridCell.GridObject.EMPTY;
+                         worldGrid[i][j].contents = Robot.GridObject.EMPTY;
                     }
                }
 
@@ -187,7 +188,7 @@ public class RoboSim
                //Add robots for each combatant
                for(String player : combatants)
                {
-                    Constructor<Robot> gen_robot = Class.forName(player).getConstructor();
+                    Constructor gen_robot = Class.forName(player).getConstructor();
                     for(int i=0; i<initial_robots_per_combatant; i++)
                     {
                          int x_pos,y_pos;
@@ -195,16 +196,16 @@ public class RoboSim
                          {
                               x_pos = generator.nextInt(length);
                               y_pos = generator.nextInt(width);
-                         } while(worldGrid[x_pos][y_pos].contents!=SimGridCell.GridObject.EMPTY);
+                         } while(worldGrid[x_pos][y_pos].contents!=Robot.GridObject.EMPTY);
 
-                         worldGrid[x_pos][y_pos].contents = SimGridCell.GridObject.SELF;
+                         worldGrid[x_pos][y_pos].contents = Robot.GridObject.SELF;
                          RobotData data = worldGrid[x_pos][y_pos].occupant_data = new RobotData();
                          data.assoc_cell = worldGrid[x_pos][y_pos];
-                         data.robot = gen_robot.newInstance();
+                         data.robot = (Robot)(gen_robot.newInstance());
                          data.player = player;
                          byte[] creation_message = new byte[64];
-                         byte[1] = turnOrder_pos % 256;
-                         byte[0] = turnOrder_pos / 256;
+                         creation_message[1] = (byte)(turnOrder_pos % 256);
+                         creation_message[0] = (byte)(turnOrder_pos / 256);
                          data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), player, skill_points);
                          data.status = new Robot.Robot_Status();
                          data.status.charge = data.status.health = data.specs.power*10;
@@ -214,14 +215,15 @@ public class RoboSim
                }
 
                //Add obstacles to battlefield
-               for(int i=0 i<obstacles; i++)
+               for(int i=0; i<obstacles; i++)
                {
+                    int x_pos, y_pos;
                     do
                     {
                          x_pos = generator.nextInt(length);
                          y_pos = generator.nextInt(width);
-                    } while(worldGrid[x_pos][y_pos].contents!=SimGridCell.GridObject.EMPTY);
-                    worldGrid[x_pos][y_pos].contents = SimGridCell.GridObject.WALL;
+                    } while(worldGrid[x_pos][y_pos].contents!=Robot.GridObject.EMPTY);
+                    worldGrid[x_pos][y_pos].contents = Robot.GridObject.WALL;
                     worldGrid[x_pos][y_pos].wallforthealth = WALL_HEALTH;
                }
           }
@@ -286,12 +288,12 @@ public class RoboSim
                     int defense = 0;
                     switch(cell_to_attack.contents)
                     {
-                    case SimGridCell.GridObject.SELF:
+                    case SELF:
                          defense = cell_to_attack.occupant_data.specs.defense + cell_to_attack.occupant_data.status.defense_boost;
                          break;
 
-                    case SimGridCell.GridObject.FORT:
-                    case SimGridCell.GridObject.WALL:
+                    case FORT:
+                    case WALL:
                          defense = 10;
                          break;
                     }
@@ -308,7 +310,7 @@ public class RoboSim
                               //we're a robot
                               for(int i=0; true; i++)
                                         if(turnOrder.get(i)==cell_to_attack.occupant_data.robot)
-                                             if((cell_to_attack.occupant_data.status-=power)<=0)
+                                             if((cell_to_attack.occupant_data.status.health-=power)<=0)
                                              {
                                                   //We destroyed the opponent!
                                                   to_return = Robot.AttackResult.DESTROYED_TARGET;
@@ -318,10 +320,10 @@ public class RoboSim
 
                                                   //Handle cell
                                                   cell_to_attack.occupant_data = null;
-                                                  cell_to_attack.contents = cell_to_attack.wallforthealth>0 ? SimGridCell.GridObject.FORT : SimGridCell.GridObject.EMPTY;
+                                                  cell_to_attack.contents = cell_to_attack.wallforthealth>0 ? Robot.GridObject.FORT : Robot.GridObject.EMPTY;
 
                                                   //Handle turnOrder position
-                                                  turnOrder.erase(i);
+                                                  turnOrder.remove(i);
                                                   if(i<turnOrder_pos)
                                                        turnOrder_pos--;
 
@@ -335,7 +337,7 @@ public class RoboSim
                                    to_return = Robot.AttackResult.DESTROYED_TARGET;
 
                                    cell_to_attack.wallforthealth = 0;
-                                   cell_to_attack.contents = SimGridCell.GridObject.EMPTY;
+                                   cell_to_attack.contents = Robot.GridObject.EMPTY;
                               }
                     }
 
@@ -368,16 +370,16 @@ public class RoboSim
                     //Is there an enemy, fort, or wall at the cell's location?
                     switch(cell_to_attack.contents)
                     {
-                    case SimGridCell.GridObject.EMPTY:
+                    case EMPTY:
                          throw new RoboSimExecutionException("attempted to attack empty cell",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.BLOCKED:
+                    case BLOCKED:
                          throw new RoboSimExecutionException("attempted to attack blocked tile",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.SELF:
+                    case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.CAPSULE:
+                    case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.ALLY:
+                    case ALLY:
                          throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.meleeAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
                     }
                     
@@ -403,8 +405,8 @@ public class RoboSim
           public Robot.AttackResult rangedAttack(int power, Robot.GridCell nonadjacent_cell) throws RoboSimExecutionException
                {
                     //Lots of error checking here (as everywhere...)
-                    if(adjacent_cell==null)
-                         throw new RoboSimExecutionException("passed null as argument to rangedAttack()");
+                    if(nonadjacent_cell==null)
+                         throw new RoboSimExecutionException("passed null as argument to rangedAttack()",actingRobot.player,actingRobot.assoc_cell);
 
 
                     //Check that we're using a valid amount of power
@@ -425,25 +427,25 @@ public class RoboSim
                     SimGridCell cell_to_attack = worldGrid[nonadjacent_cell.x_coord][nonadjacent_cell.y_coord];
 
                     //Do we have a "clear shot"?
-                    List<Robot.GridCell> shortest_path = Robot.RobotUtility.findShortestPath(actingRobot.assoc_cell,cell_to_attack,worldGrid);
+                    Robot.GridCell[] shortest_path = Robot.RobotUtility.findShortestPath(actingRobot.assoc_cell,cell_to_attack,worldGrid);
                     if(shortest_path==null) //we don't have a clear shot
                          throw new RoboSimExecutionException("attempted to range attack cell with no clear path",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    else if(shortest_path.size()>actingRobot.specs.defense) //out of range
+                    else if(shortest_path.length>actingRobot.specs.defense) //out of range
                          throw new RoboSimExecutionException("attempted to range attack cell more than (defense) tiles away",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
 
                     //Is there an enemy, fort, or wall at the cell's location?
                     switch(cell_to_attack.contents)
                     {
-                    case SimGridCell.GridObject.EMPTY:
+                    case EMPTY:
                          throw new RoboSimExecutionException("attempted to attack empty cell",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.BLOCKED:
+                    case BLOCKED:
                          throw new RoboSimExecutionException("attempted to attack blocked tile",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.SELF:
+                    case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.CAPSULE:
+                    case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.ALLY:
+                    case ALLY:
                          throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.rangedAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
                     }
 
@@ -473,7 +475,7 @@ public class RoboSim
                          throw new RoboSimExecutionException("passed invalid cell coordinates to capsuleAttack()",actingRobot.player,actingRobot.assoc_cell,cell);
 
                     //Cell to attack
-                    GridCell cell_to_attack = worldGrid[cell.x_coord][cell.y_coord];
+                    SimGridCell cell_to_attack = worldGrid[cell.x_coord][cell.y_coord];
 
                     //Do we have a capsule of this power rating?
                     int capsule_index = ArrayUtility.linearSearch(actingRobot.status.capsules,power_of_capsule);
@@ -486,28 +488,32 @@ public class RoboSim
                          throw new RoboSimExecutionException("attempted to use capsule of greater power than attack+defense",actingRobot.player,actingRobot.assoc_cell);
 
                     //Can we hit the target?  Range is power of capsule + defense.
-                    if(Robot.RobotUtility.findShortestPath(actingRobot.assoc_cell,cell_to_attack,grid).length > power_of_capsule + actingRobot.specs.defense)
+                    Robot.GridCell[] shortest_path = Robot.RobotUtility.findShortestPath(actingRobot.assoc_cell,cell_to_attack,worldGrid);
+
+                    if(shortest_path==null)
+                         throw new RoboSimExecutionException("no clear shot to target",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+
+                    if(shortest_path.length > power_of_capsule + actingRobot.specs.defense)
                          throw new RoboSimExecutionException("target not in range",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
 
                     //Is there an enemy, fort, or wall at the cell's location?
                     switch(cell_to_attack.contents)
                     {
-                    case SimGridCell.GridObject.EMPTY:
+                    case EMPTY:
                          throw new RoboSimExecutionException("attempted to attack empty cell",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.BLOCKED:
+                    case BLOCKED:
                          throw new RoboSimExecutionException("attempted to attack blocked tile",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.SELF:
+                    case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.CAPSULE:
+                    case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
-                    case SimGridCell.GridObject.ALLY:
+                    case ALLY:
                          throw new RuntimeException("ERROR in RoboSim.RoboAPIImplementor.capsuleAttack().  This is probably not the student's fault.  Contact Patrick Simmons about this message.  (Not the Doobie Brother...)");
                     }
 
                     /*Okay, if we're still here, we can use the capsule.
                       Need to delete capsule from robot status structure.
-                      (We're using arrays here b/c of 1301).
                     */
                     actingRobot.status.capsules = ArrayUtility.deleteElement(actingRobot.status.capsules,capsule_index);
 
@@ -525,7 +531,7 @@ public class RoboSim
                     }
 
                     //Process attack
-                    return processAttack(attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
+                    return processAttack(actingRobot.specs.attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
                }
 
           public void defend(int power)
@@ -547,16 +553,16 @@ public class RoboSim
                     final int actor_y = y_coord;
                     switch(way)
                     {
-                    case Robot.Direction.UP:
+                    case UP:
                          y_coord+=steps;
                          break;
-                    case Robot.Direction.DOWN:
+                    case DOWN:
                          y_coord-=steps;
                          break;
-                    case Robot.Direction.LEFT:
+                    case LEFT:
                          x_coord-=steps;
                          break;
-                    case Robot.Direction.RIGHT:
+                    case RIGHT:
                          x_coord+=steps;
                          break;
                     }
@@ -569,8 +575,8 @@ public class RoboSim
                     final boolean x_left = x_coord<actor_x;
                     final boolean y_left = y_coord<actor_y;
                     if(x_coord!=actor_x)
-                         for(int i=(x_left ? actor_x-1 : actor_x+1); i!=x_coord; x_left ? x-- : x++)
-                              if(worldGrid[x_coord][y_coord].contents!=SimGridCell.GridObject.EMPTY)
+                         for(int i=(x_left ? actor_x-1 : actor_x+1); i!=x_coord; i=(x_left ? i-1 : i+1))
+                              if(worldGrid[x_coord][y_coord].contents!=Robot.GridObject.EMPTY)
                                    throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
 
                     //Okay, now: do we have enough power/charge?
@@ -582,10 +588,10 @@ public class RoboSim
                     actingRobot.status.charge-=steps;
 
                     //Change position of robot.
-                    actingRobot.assoc_cell.contents = SimGridCell.GridObject.EMPTY;
-                    actingRobot.assoc_cell.occupant_data = NULL;
+                    actingRobot.assoc_cell.contents = Robot.GridObject.EMPTY;
+                    actingRobot.assoc_cell.occupant_data = null;
                     actingRobot.assoc_cell = worldGrid[x_coord][y_coord];
-                    actingRobot.assoc_cell.contents = SimGridCell.GridObject.SELF;
+                    actingRobot.assoc_cell.contents = Robot.GridObject.SELF;
                     actingRobot.assoc_cell.occupant_data = actingRobot;
                }
 
@@ -601,7 +607,7 @@ public class RoboSim
                          throw new RoboSimExecutionException("passed invalid cell coordinates to pick_up_capsule()",actingRobot.player,actingRobot.assoc_cell,adjacent_cell);
 
                     //Cell in question
-                    SimGridCell gridCell = worldGrid[cell.x_coord][cell.y_coord];
+                    SimGridCell gridCell = worldGrid[adjacent_cell.x_coord][adjacent_cell.y_coord];
 
                     //Cell must be adjacent
                     if(!isAdjacent(adjacent_cell))
@@ -612,12 +618,12 @@ public class RoboSim
                          throw new RoboSimExecutionException("attempted to pick up capsule with no power",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Is there actually a capsule there?
-                    if(gridCell.contents!=GridCell.contents.CAPSULE)
+                    if(gridCell.contents!=Robot.GridObject.CAPSULE)
                          throw new RoboSimExecutionException("attempted to pick up capsule from cell with no capsule",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Do we have "room" for this capsule?
                     if(actingRobot.status.capsules.length+1>actingRobot.specs.attack+actingRobot.specs.defense)
-                         throw new RoboSimExcecutionException("attempted to pick up too many capsules",actingRobot.player,actingRobot.assoc_cell,gridCell);
+                         throw new RoboSimExecutionException("attempted to pick up too many capsules",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //If still here, yes.
 
@@ -626,7 +632,7 @@ public class RoboSim
 
                     //Put capsule in our inventory, delete it from world
                     actingRobot.status.capsules = ArrayUtility.addElement(actingRobot.status.capsules,gridCell.capsule_power);
-                    gridCell.contents = SimGridCell.GridObject.EMPTY;
+                    gridCell.contents = Robot.GridObject.EMPTY;
                     gridCell.capsule_power = 0;
                }
 
@@ -649,16 +655,16 @@ public class RoboSim
                          throw new RoboSimExecutionException("attempted to pick up capsule in nonadjacent cell",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Is the cell empty?
-                    if(gridCell.contents!=SimGridCell.GridObject.EMPTY)
-                         throw new RoboSimExcecutionException("attempted to place capsule in nonempty cell",actingRobot.player,actingRobot.assoc_cell,gridCell);
+                    if(gridCell.contents!=Robot.GridObject.EMPTY)
+                         throw new RoboSimExecutionException("attempted to place capsule in nonempty cell",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Do we have such a capsule?
                     int index = ArrayUtility.linearSearch(actingRobot.status.capsules,power_of_capsule);
                     if(index==-1)
-                         throw new RoboSimExecutionException("attempted to drop capsule with power "+power_of_capsule", having no such capsule",actingRobot.player,actingRobot.assoc_cell,gridCell);
+                         throw new RoboSimExecutionException("attempted to drop capsule with power "+power_of_capsule+", having no such capsule",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Okay.  We're good.  Drop the capsule
-                    gridCell.contents = SimGridCell.GridObject.CAPSULE;
+                    gridCell.contents = Robot.GridObject.CAPSULE;
                     gridCell.capsule_power = power_of_capsule;
 
                     //Delete it from our inventory
@@ -670,7 +676,7 @@ public class RoboSim
                     return actingRobot.whatBuilding;
                }
 
-          public cRobot.GridCell getBuildTarget()
+          public Robot.GridCell getBuildTarget()
                {
                     return actingRobot.invested_assoc_cell;
                }
@@ -689,60 +695,60 @@ public class RoboSim
                     //What do we have to finalize?
                     switch(actingRobot.whatBuilding)
                     {
-                    case Robot.BuildStatus.WALL:
+                    case WALL:
                          if(actingRobot.investedPower >= WALL_HEALTH)
-                              actingRobot.invested_assoc_cell.contents = SimGridCell.GridObject.WALL;
+                              actingRobot.invested_assoc_cell.contents = Robot.GridObject.WALL;
                          else
-                              actingRobot.invested_assoc_cell.contents = SimGridCell.gridObject.EMPTY;
+                              actingRobot.invested_assoc_cell.contents = Robot.GridObject.EMPTY;
                          break;
 
-                    case Robot.BuildStatus.FORT:
+                    case FORT:
                          if(actingRobot.investedPower >= 75)
-                              actingRobot.invested_assoc_cell.contents = SimGridCell.GridObject.FORT;
+                              actingRobot.invested_assoc_cell.contents = Robot.GridObject.FORT;
                          else
-                              actingRobot.invested_assoc_cell.contents = SimGridCell.gridObject.EMPTY;
+                              actingRobot.invested_assoc_cell.contents = Robot.GridObject.EMPTY;
                          break;
 
-                    case Robot.BuildStatus.CAPSULE:
+                    case CAPSULE:
                          int capsule_power = actingRobot.investedPower/10;
                          if(capsule_power!=0)
                          {
                               if(actingRobot.status.capsules.length+1>actingRobot.specs.attack+actingRobot.specs.defense)
-                                   throw new RoboSimExcecutionException("attempted to finish building capsule when already at max capsule capacity",actingRobot.player,actingRobot.assoc_cell);
+                                   throw new RoboSimExecutionException("attempted to finish building capsule when already at max capsule capacity",actingRobot.player,actingRobot.assoc_cell);
                               actingRobot.status.capsules = ArrayUtility.addElement(actingRobot.status.capsules,capsule_power);
                          }
                          break;
 
-                    case Robot.BuildStatus.ROBOT:
+                    case ROBOT:
                          int skill_points = actingRobot.investedPower/20;
                          if(skill_points!=0)
                          {
                               //Check creation message correct size
-                              if(creation_message!=null && creation_message.size()!=64)
+                              if(creation_message!=null && creation_message.length!=64)
                                    throw new RoboSimExecutionException("passed incorrect sized creation message to setBuildTarget()",actingRobot.player,actingRobot.assoc_cell,actingRobot.invested_assoc_cell);
 
                               //Set default creation message if we don't have one
                               if(creation_message==null)
                               {
                                    creation_message = new byte[64];
-                                   creation_message[1] = turnOrder.size() % 256;
-                                   creation_message[0] = turnOrder.size() / 256;
+                                   creation_message[1] = (byte)(turnOrder.size() % 256);
+                                   creation_message[0] = (byte)(turnOrder.size() / 256);
                               }
 
                               //Create the robot
-                              actingRobot.invested_assoc_cell.contents = SimGridCell.GridObject.SELF;
+                              actingRobot.invested_assoc_cell.contents = Robot.GridObject.SELF;
                               RobotData data = actingRobot.invested_assoc_cell.occupant_data = new RobotData();
                               data.assoc_cell = actingRobot.invested_assoc_cell;
-                              data.robot = Class.forName(actingRobot.player).getConstructor().newInstance();
+                              data.robot = (Robot)(Class.forName(actingRobot.player).getConstructor().newInstance());
                               data.player = actingRobot.player;
                               data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), actingRobot.player, skill_points);
                               data.status = new Robot.Robot_Status();
                               data.status.charge = data.status.health = data.specs.power*10;
-                              data.bufferedRadio = new ArrayList<byte[]>();
+                              data.buffered_radio = new ArrayList<byte[]>();
                               turnOrder.add(data);
                          }
                          else
-                              actingRobot.invested_assoc_cell.contents = SimGridCell.gridObject.EMPTY;
+                              actingRobot.invested_assoc_cell.contents = Robot.GridObject.EMPTY;
                          break;                              
                     }
                }
@@ -758,43 +764,43 @@ public class RoboSim
                     if(actingRobot.whatBuilding!=null)
                          finalizeBuilding(message);
 
+                    //Error checking, *sigh*...
+
+                    //Does cell exist in grid?
+                    if(location!=null && (location.x_coord > worldGrid.length || location.y_coord > worldGrid[0].length || location.x_coord < 0 || location.y_coord < 0))
+                         throw new RoboSimExecutionException("passed invalid cell coordinates to setBuildTarget()",actingRobot.player,actingRobot.assoc_cell,location);
+
+                    //Cell in question
+                    SimGridCell gridCell = (location!=null ? worldGrid[location.x_coord][location.y_coord] : null);
+
                     //Update status
                     actingRobot.whatBuilding = status;
                     actingRobot.investedPower = 0;                    
-                    actingRobot.invested_assoc_cell = location;
+                    actingRobot.invested_assoc_cell = gridCell;
 
-                    //Error checking, *sigh*...
                     //CAN pass us null, so special-case it
                     if(location==null)
                     {
                          //We must be building capsule, then.
                          if(actingRobot.whatBuilding!=null && actingRobot.whatBuilding!=Robot.BuildStatus.CAPSULE)
                               throw new RoboSimExecutionException("passed null to setBuildTarget() location with non-null and non-capsule build target",actingRobot.player,actingRobot.assoc_cell);
-                         actingRobot.investedPower = 0;
                          return;
                     }
 
                     //If location NOT null, must not be building capsule
-                    if(location!=null && (status == null || status == Robot.BuildStatus.CAPSULE))
+                    if(status == null || status == Robot.BuildStatus.CAPSULE)
                          throw new RoboSimExecutionException("attempted to target capsule or null building on non-null adjacent cell",actingRobot.player,actingRobot.assoc_cell,location);
-
-                    //Does cell exist in grid?
-                    if(location.x_coord > worldGrid.length || location.y_coord > worldGrid[0].length || location.x_coord < 0 || location.y_coord < 0)
-                         throw new RoboSimExecutionException("passed invalid cell coordinates to setBuildTarget()",actingRobot.player,actingRobot.assoc_cell,location);
-
-                    //Cell in question
-                    SimGridCell gridCell = worldGrid[location.x_coord][location.y_coord];
 
                     //Cell must be adjacent
                     if(!isAdjacent(location))
                          throw new RoboSimExecutionException("attempted to set build target to nonadjacent cell",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Is the cell empty?
-                    if(gridCell.contents!=SimGridCell.GridObject.EMPTY)
-                         throw new RoboSimExcecutionException("attempted to set build target to nonempty cell",actingRobot.player,actingRobot.assoc_cell,gridCell);
+                    if(gridCell.contents!=Robot.GridObject.EMPTY)
+                         throw new RoboSimExecutionException("attempted to set build target to nonempty cell",actingRobot.player,actingRobot.assoc_cell,gridCell);
 
                     //Okay, block off cell since we're building there now.
-                    gridCell.contents = SimGridCell.GridObject.BLOCKED;
+                    gridCell.contents = Robot.GridObject.BLOCKED;
                }
 
           public void build(int power)
@@ -813,6 +819,10 @@ public class RoboSim
                     actingRobot.status.charge-=power;
                     actingRobot.status.power-=power;
                     actingRobot.status.health+=power/2;
+
+                    //Can't have more health than charge skill*10
+                    if(actingRobot.status.health > actingRobot.specs.charge*10)
+                         actingRobot.status.health = actingRobot.specs.charge*10;
                }
 
           public void charge(int power, Robot.GridCell ally)
@@ -838,7 +848,7 @@ public class RoboSim
                     SimGridCell allied_cell = worldGrid[ally.x_coord][ally.y_coord];
 
                     //Is there an ally in that cell?
-                    if(allied_cell.contents!=SimGridCell.GridObject.SELF || !allied_cell.occupant_data.player.equals(actingRobot.player))
+                    if(allied_cell.contents!=Robot.GridObject.SELF || !allied_cell.occupant_data.player.equals(actingRobot.player))
                          throw new RoboSimExecutionException("attempted to charge non-ally, or cell with no robot in it",actingRobot.player,actingRobot.assoc_cell,allied_cell);
 
                     //Perform the charge
@@ -855,10 +865,10 @@ public class RoboSim
                     if(message.length!=64)
                          throw new RoboSimExecutionException("attempted to send message byte array of incorrect length", actingRobot.player,actingRobot.assoc_cell);
 
-                    GridCell target = null;
+                    Robot.GridCell target = null;
                     if(power==1)
                     {
-                         target = Robot.findNearestAlly(origin,grid);
+                         target = Robot.RobotUtility.findNearestAlly(actingRobot.assoc_cell,worldGrid);
                          if(target!=null)
                          {
                               /*There's a way to "cheat" here and set up a power-free comm channel
@@ -885,10 +895,10 @@ public class RoboSim
                     final int x_right = (xloc + range > worldGrid.length-1) ? (worldGrid.length-1) : (xloc + range);
                     final int y_up = (yloc - range < 0) ? 0 : (yloc - range);
                     final int y_down = (yloc + range > worldGrid[0].length - 1) ? (worldGrid[0].length-1) : (yloc + range);
-                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(x_left,y_up,x_right,y_down));
+                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(x_left,y_up,x_right,y_down),actingRobot.player);
 
                     //Set associated cell to SELF instead of ALLY
-                    to_return[xloc - x_left][yloc - y_up].contents=SimGridCell.GridObject.SELF;
+                    to_return[xloc - x_left][yloc - y_up].contents=Robot.GridObject.SELF;
                     return to_return;
                }
 
@@ -897,15 +907,43 @@ public class RoboSim
                     if(power!=3)
                          throw new RoboSimExecutionException("tried to get world with invalid power (not equal to 3)",actingRobot.player,actingRobot.assoc_cell);
 
-                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length,worldGrid[0].length));
+                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length,worldGrid[0].length),actingRobot.player);
 
                     //Set self to self instead of ally
-                    to_return[xloc - x_left][yloc - y_up].contents=SimGridCell.GridObject.SELF;
+                    to_return[actingRobot.assoc_cell.x_coord][actingRobot.assoc_cell.y_coord].contents=Robot.GridObject.SELF;
                     return to_return;
                }
 
           public void scanEnemy(Robot.Robot_Specs enemySpecs, Robot.Robot_Status enemyStatus, Robot.GridCell toScan)
                {
+                    if(enemySpecs==null || enemyStatus==null || toScan==null
+                       || toScan.x_coord < 0 || toScan.x_coord >= worldGrid.length || toScan.y_coord < 0 || toScan.y_coord >= worldGrid[0].length || actingRobot.status.power==0)
+                         throw new RoboSimExecutionException("Invalid parameters passed to scanEnemy()",actingRobot.player,actingRobot.assoc_cell);
+
+                    SimGridCell cell = worldGrid[toScan.x_coord][toScan.y_coord];
+
+                    //Are we within range?
+                    if(Math.abs(actingRobot.assoc_cell.x_coord - cell.x_coord) > actingRobot.specs.defense || Math.abs(actingRobot.assoc_cell.y_coord - cell.y_coord) > actingRobot.specs.defense)
+                         throw new RoboSimExecutionException("attempted to scan farther than range", actingRobot.player, actingRobot.assoc_cell);
+
+                    //Is there a robot in this cell?
+                    if(cell.contents != Robot.GridObject.SELF)
+                         throw new RoboSimExecutionException("attempted to scan invalid cell (no robot in cell)", actingRobot.player, actingRobot.assoc_cell, cell);
+
+                    //Register cost
+                    actingRobot.status.power--;
+                    actingRobot.status.charge--;
+
+                    //Okay, we're good.  Fill in the data.
+                    enemySpecs.attack = cell.occupant_data.specs.attack;
+                    enemySpecs.defense = cell.occupant_data.specs.defense;
+                    enemySpecs.power = cell.occupant_data.specs.power;
+                    enemySpecs.charge = cell.occupant_data.specs.charge;
+                    enemyStatus.power = cell.occupant_data.status.power;
+                    enemyStatus.charge = cell.occupant_data.status.charge;
+                    enemyStatus.health = cell.occupant_data.status.health;
+                    enemyStatus.defense_boost = cell.occupant_data.status.defense_boost;
+                    enemyStatus.capsules = cell.occupant_data.status.capsules.clone();
                }
      }
 
@@ -915,6 +953,24 @@ public class RoboSim
       */
      public String executeSingleTimeStep() throws RoboSimExecutionException
           {
-               
+               for(turnOrder_pos=0; turnOrder_pos<turnOrder.size(); turnOrder_pos++)
+               {
+                    //References to robot's data
+                    RobotData data = turnOrder.get(turnOrder_pos);
+                    WorldAPI student_api = new RoboAPIImplementor(data);
+
+                    //Charge robot an amount of charge equal to charge skill
+                    data.status.charge = Math.min(data.status.charge + data.specs.charge, data.specs.charge*10);
+
+                    /*We can spend up to status.power power this turn, but
+                     *no more than our current charge level*/
+                    data.status.power = Math.min(data.specs.power, data.status.charge);
+
+                    //Clone status for student
+                    Robot.Robot_Status clonedStatus = (Robot.Robot_Status)(data.status.clone());
+
+                    //Run student code
+                    data.robot.act(student_api,clonedStatus,data.buffered_radio.toArray(new byte[0][]));
+               }
           }
 }

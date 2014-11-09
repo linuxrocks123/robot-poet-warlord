@@ -5,6 +5,9 @@
  */
 import java.util.List;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.TreeMap;
 public interface Robot
 {
      /** Represents skill point allocation of Robot.*/
@@ -21,6 +24,10 @@ public interface Robot
 
           /**Charge skill.*/
           public int charge;
+
+          /**override clone and make it public (to implement Cloneable)*/
+          public Object clone() throws CloneNotSupportedException
+               { return super.clone(); }
      }
 
      /**
@@ -83,6 +90,10 @@ public interface Robot
 
           /**power of capsule, if there is a capsule in the cell.*/
           public int capsule_power;
+
+          /**override clone and make it public (to implement Cloneable)*/
+          public Object clone() throws CloneNotSupportedException
+               { return super.clone(); }
      }
 
      /**Attack type: melee, ranged, or capsule*/
@@ -146,9 +157,9 @@ public interface Robot
            *         origin to the target.  Will return null if no path
            *         could be found in the given grid.
            */
-          public static GridCell[] findShortestPath(GridCell origin, GridCell target, GridCell[][] grid)
+          public static GridCell[] findShortestPath(GridCell origin, final GridCell target, GridCell[][] grid)
                {
-                    return findShortestPathInternal(origin,new FSPPRedicate () {
+                    return findShortestPathInternal(origin,new FSPPredicate () {
                               public boolean validCell(GridCell maybeTarget)
                                    {
                                         return maybeTarget==target;
@@ -157,36 +168,36 @@ public interface Robot
                          new FSPPredicate() {
                               public boolean validCell(GridCell maybePassable)
                                    {
-                                        return maybePassable.contents==GridCell.EMPTY;
+                                        return maybePassable.contents==GridObject.EMPTY;
                                    }
                          },
                          grid);
                }
 
-          private static GridCell[][] findShortestPathInternal(GridCell origin, FSPPredicate isTarget, FRSPPredicate isPassable, GridCell[][] grid)
+          private static GridCell[] findShortestPathInternal(GridCell origin, FSPPredicate isTarget, FSPPredicate isPassable, GridCell[][] grid)
                {
                     //Offsets to handle incomplete world map
                     int x_offset = grid[0][0].x_coord;
                     int y_offset = grid[0][0].y_coord;
                     
                     //Structures to efficiently handle accounting
-                    TreeMap<Integer,List<GridCell>> unvisited_nodes = new TreeMap<Integer,List<GridCell>>(); //this is really a multimap
-                    Map<GridCell,List<GridCell>> current_costs = new HashMap<GridCell,List<GridCell>>();
+                    TreeMap<Integer,LinkedList<GridCell>> unvisited_nodes = new TreeMap<Integer,LinkedList<GridCell>>(); //this is really a multimap
+                    Map<GridCell,LinkedList<GridCell>> current_costs = new HashMap<GridCell,LinkedList<GridCell>>();
 
                     //Origin's shortest path is simply itself
-                    List<GridCell> origin_path = new LinkedList<GridCell>();
+                    LinkedList<GridCell> origin_path = new LinkedList<GridCell>();
                     origin_path.add(origin);
 
                     //Initialize graph search with origin
                     current_costs.put(origin,origin_path);
                     unvisited_nodes.put(0,origin_path);
 
-                    while(unvisited_nodes.size())
+                    while(unvisited_nodes.size()!=0)
                     {
-                         Map.Entry<Integer,List<GridCell>> current_entry = unvisited_nodes.firstEntry();
+                         Map.Entry<Integer,LinkedList<GridCell>> current_entry = unvisited_nodes.firstEntry();
                          int our_cost = current_entry.getKey();
                          GridCell our_cell = current_entry.getValue().pop();
-                         List<GridCell> current_path = current_costs.get(our_cell);
+                         LinkedList<GridCell> current_path = current_costs.get(our_cell);
 
                          //If we are a destination, algorithm has finished: return our current path
                          if(isTarget.validCell(our_cell))
@@ -204,11 +215,11 @@ public interface Robot
                          int gridY_value = our_cell.y_coord - x_offset;
                          if(gridX_value!=0)
                               adjacent_nodes.add(grid[gridX_value-1][gridY_value]);
-                         if(gridX_value!=grid.size()-1)
+                         if(gridX_value!=grid.length-1)
                               adjacent_nodes.add(grid[gridX_value+1][gridY_value]);
                          if(gridY_value!=0)
                               adjacent_nodes.add(grid[gridX_value][gridY_value-1]);
-                         if(gridY_value!=grid[0].size()-1)
+                         if(gridY_value!=grid[0].length-1)
                               adjacent_nodes.add(grid[gridX_value][gridY_value+1]);
 
                          /*Iterate over adjacent nodes, add to or update
@@ -221,7 +232,7 @@ public interface Robot
                                    continue;
 
                               //Generate proposed path
-                              List<GridCell> x_proposed_path = (List<GridCell>)(current_path.clone());
+                              LinkedList<GridCell> x_proposed_path = (LinkedList<GridCell>)(current_path.clone());
                               x_proposed_path.add(x);
 
                               //current least cost path
@@ -229,7 +240,7 @@ public interface Robot
 
                               if(clcp!=null && clcp.size()-1>our_cost+1)
                               {
-                                   List<GridCell> old_unvisited = unvisited_nodes.get(clcp.size()-1);
+                                   LinkedList<GridCell> old_unvisited = unvisited_nodes.get(clcp.size()-1);
                                    old_unvisited.removeFirstOccurrence(x);
                                    if(old_unvisited.size()==0)
                                         unvisited_nodes.remove(clcp.size()-1);
@@ -237,7 +248,7 @@ public interface Robot
                               else if(clcp!=null && clcp.size()-1<=our_cost+1)
                                    continue;
 
-                              List<GridCell> new_unvisited = unvisited_nodes.get(our_cost+1);
+                              LinkedList<GridCell> new_unvisited = unvisited_nodes.get(our_cost+1);
                               if(new_unvisited==null)
                               {
                                    new_unvisited = new LinkedList<GridCell>();
