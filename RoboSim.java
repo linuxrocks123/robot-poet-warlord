@@ -114,6 +114,8 @@ public class RoboSim
                for(int i=x_left; i<=x_right; i++)
                     for(int j=y_up; j<=y_down; j++)
                          to_return[i-x_left][j-y_up] = worldGrid[i][j];
+               
+               return to_return;
           }
 
      /**Sanitizer to create a GridCell[][] 2D array to give to client.
@@ -129,7 +131,15 @@ public class RoboSim
                for(int i=0; i<simgrid.length; i++)
                     for(int j=0; j<simgrid.length; j++)
                     {
-                         SimGridCell sanitized = (SimGridCell)(simgrid[i][j].clone());
+                    	SimGridCell sanitized;
+                    	try
+                    	{
+                    		sanitized = (SimGridCell)(simgrid[i][j].clone());
+                    	}
+                    	catch(CloneNotSupportedException e)
+                    	{
+                    		throw new RuntimeException("Problem in sanitizeGrid() clone attempt.  This is not the student's fault.");
+                    	}
                          if(sanitized.contents==Robot.GridObject.SELF)
                               if(sanitized.occupant_data.player.equals(player))
                                    sanitized.contents=Robot.GridObject.ALLY;
@@ -188,7 +198,19 @@ public class RoboSim
                //Add robots for each combatant
                for(String player : combatants)
                {
-                    Constructor gen_robot = Class.forName(player).getConstructor();
+                    Constructor gen_robot;
+                    try
+                    {
+                    	gen_robot = Class.forName(player).getConstructor();
+                    }
+                    catch(ClassNotFoundException e)
+                    {
+                    	throw new RoboSimExecutionException("robot not found", player);
+                    }
+                    catch(NoSuchMethodException e)
+                    {
+                    	throw new RoboSimExecutionException("Student's robot doesn't have a default constructor", player);
+                    }
                     for(int i=0; i<initial_robots_per_combatant; i++)
                     {
                          int x_pos,y_pos;
@@ -201,7 +223,14 @@ public class RoboSim
                          worldGrid[x_pos][y_pos].contents = Robot.GridObject.SELF;
                          RobotData data = worldGrid[x_pos][y_pos].occupant_data = new RobotData();
                          data.assoc_cell = worldGrid[x_pos][y_pos];
-                         data.robot = (Robot)(gen_robot.newInstance());
+                         try
+                         {
+                        	 data.robot = (Robot)(gen_robot.newInstance());
+                         }
+                         catch(Exception e)
+                         {
+                        	 throw new RoboSimExecutionException("something went wrong invoking studen'ts constructor", player);
+                         }
                          data.player = player;
                          byte[] creation_message = new byte[64];
                          creation_message[1] = (byte)(turnOrder_pos % 256);
@@ -279,7 +308,7 @@ public class RoboSim
            * @param cell_to_attack cell attacker is attacking containing enemy or obstacle
            * @param damage damage if attack hits
            */
-          private Robot.AttackResult processAttack(int attack, SimGridCell cell_to_attack, int power)
+          private Robot.AttackResult processAttack(int attack, SimGridCell cell_to_attack, int power) throws RoboSimExecutionException
                {
                     //Holds result of attack
                     Robot.AttackResult to_return = Robot.AttackResult.MISSED;
@@ -464,7 +493,7 @@ public class RoboSim
                     return processAttack(attack,cell_to_attack,power);
                }
 
-          public Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell)
+          public Robot.AttackResult capsuleAttack(int power_of_capsule, Robot.GridCell cell) throws RoboSimExecutionException
                {
                     //Error checking, *sigh*...
                     if(cell==null)
@@ -534,7 +563,7 @@ public class RoboSim
                     return processAttack(actingRobot.specs.attack + power_of_capsule,cell_to_attack,(int)(Math.ceil(0.1 * power_of_capsule * actingRobot.specs.attack)));
                }
 
-          public void defend(int power)
+          public void defend(int power) throws RoboSimExecutionException
                {
                     //Error checking
                     if(power < 0 || power > actingRobot.specs.defense || power > actingRobot.specs.power || power > actingRobot.status.charge)
@@ -545,7 +574,7 @@ public class RoboSim
                     actingRobot.status.defense_boost+=power;
                }
 
-          public void move(int steps, Robot.Direction way)
+          public void move(int steps, Robot.Direction way) throws RoboSimExecutionException
                {
                     int x_coord = actingRobot.assoc_cell.x_coord;
                     final int actor_x = x_coord;
@@ -595,7 +624,7 @@ public class RoboSim
                     actingRobot.assoc_cell.occupant_data = actingRobot;
                }
 
-          public void pick_up_capsule(Robot.GridCell adjacent_cell)
+          public void pick_up_capsule(Robot.GridCell adjacent_cell) throws RoboSimExecutionException
                {
                     //Error checking, *sigh*...
                     //Can't pass us null
@@ -636,7 +665,7 @@ public class RoboSim
                     gridCell.capsule_power = 0;
                }
 
-     public void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule)
+     public void drop_capsule(Robot.GridCell adjacent_cell, int power_of_capsule) throws RoboSimExecutionException
                {
                     //Error checking, *sigh*...
                     //Can't pass us null
@@ -686,7 +715,7 @@ public class RoboSim
                     return actingRobot.investedPower;
                }
 
-          private void finalizeBuilding(byte[] creation_message)
+          private void finalizeBuilding(byte[] creation_message) throws RoboSimExecutionException
                {
                     //Nothing to finalize if not building anything
                     if(actingRobot.whatBuilding==null)
@@ -739,7 +768,14 @@ public class RoboSim
                               actingRobot.invested_assoc_cell.contents = Robot.GridObject.SELF;
                               RobotData data = actingRobot.invested_assoc_cell.occupant_data = new RobotData();
                               data.assoc_cell = actingRobot.invested_assoc_cell;
-                              data.robot = (Robot)(Class.forName(actingRobot.player).getConstructor().newInstance());
+                              try
+                              {
+                            	  data.robot = (Robot)(Class.forName(actingRobot.player).getConstructor().newInstance());
+                              }
+                              catch(Exception e)
+                              {
+                            	  throw new RoboSimExecutionException("something went wrong calling student's constructor", actingRobot.player,actingRobot.assoc_cell, actingRobot.invested_assoc_cell);
+                              }
                               data.player = actingRobot.player;
                               data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), actingRobot.player, skill_points);
                               data.status = new Robot.Robot_Status();
@@ -753,12 +789,12 @@ public class RoboSim
                     }
                }
 
-          public void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location)
+          public void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location) throws RoboSimExecutionException
                {
                     setBuildTarget(status,location,null);
                }
 
-          public void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] message)
+          public void setBuildTarget(Robot.BuildStatus status, Robot.GridCell location, byte[] message) throws RoboSimExecutionException
                {
                     //If we're in the middle of building something, finalize it.
                     if(actingRobot.whatBuilding!=null)
@@ -803,7 +839,7 @@ public class RoboSim
                     gridCell.contents = Robot.GridObject.BLOCKED;
                }
 
-          public void build(int power)
+          public void build(int power) throws RoboSimExecutionException
                {
                     if(power > actingRobot.status.power || power < 0)
                          throw new RoboSimExecutionException("attempted to apply invalid power to build task",actingRobot.player,actingRobot.assoc_cell);
@@ -812,7 +848,7 @@ public class RoboSim
                     actingRobot.investedPower+=power;
                }
 
-          public void repair(int power)
+          public void repair(int power) throws RoboSimExecutionException
                {
                     if(power > actingRobot.status.power || power < 0)
                          throw new RoboSimExecutionException("attempted to apply invalid power to repair task",actingRobot.player,actingRobot.assoc_cell);
@@ -825,7 +861,7 @@ public class RoboSim
                          actingRobot.status.health = actingRobot.specs.charge*10;
                }
 
-          public void charge(int power, Robot.GridCell ally)
+          public void charge(int power, Robot.GridCell ally) throws RoboSimExecutionException
                {
                     //Lots of error checking here (as everywhere...)
                     if(ally==null)
@@ -857,7 +893,7 @@ public class RoboSim
                     allied_cell.occupant_data.status.charge+=power;
                }
 
-          public void sendMessage(byte[] message, int power)
+          public void sendMessage(byte[] message, int power) throws RoboSimExecutionException
                {
                     if(power < 1 || power > 2)
                          throw new RoboSimExecutionException("attempted to send message with invalid power", actingRobot.player,actingRobot.assoc_cell);
@@ -902,7 +938,7 @@ public class RoboSim
                     return to_return;
                }
 
-          public Robot.GridCell[][] getWorld(int power)
+          public Robot.GridCell[][] getWorld(int power) throws RoboSimExecutionException
                {
                     if(power!=3)
                          throw new RoboSimExecutionException("tried to get world with invalid power (not equal to 3)",actingRobot.player,actingRobot.assoc_cell);
@@ -914,7 +950,7 @@ public class RoboSim
                     return to_return;
                }
 
-          public void scanEnemy(Robot.Robot_Specs enemySpecs, Robot.Robot_Status enemyStatus, Robot.GridCell toScan)
+          public void scanEnemy(Robot.Robot_Specs enemySpecs, Robot.Robot_Status enemyStatus, Robot.GridCell toScan) throws RoboSimExecutionException
                {
                     if(enemySpecs==null || enemyStatus==null || toScan==null
                        || toScan.x_coord < 0 || toScan.x_coord >= worldGrid.length || toScan.y_coord < 0 || toScan.y_coord >= worldGrid[0].length || actingRobot.status.power==0)
@@ -967,10 +1003,22 @@ public class RoboSim
                     data.status.power = Math.min(data.specs.power, data.status.charge);
 
                     //Clone status for student
-                    Robot.Robot_Status clonedStatus = (Robot.Robot_Status)(data.status.clone());
+                    Robot.Robot_Status clonedStatus;
+                    try
+                    {
+                    	clonedStatus = (Robot.Robot_Status)(data.status.clone());
+                    }
+                    catch(CloneNotSupportedException e)
+                    {
+                    	throw new RuntimeException("error cloning in executeSingleTimeStep.  This is not the student's fault.");
+                    }
 
                     //Run student code
                     data.robot.act(student_api,clonedStatus,data.buffered_radio.toArray(new byte[0][]));
                }
+               
+               if(turnOrder.size()==1)
+            	   return turnOrder.get(0).player;
+               return null;
           }
 }
