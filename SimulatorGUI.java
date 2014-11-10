@@ -20,9 +20,29 @@
  */
 import java.awt.*;
 import java.awt.event.*;
+import javax.swing.Timer;
 public class SimulatorGUI extends Frame
 {
-	public SimulatorGUI() {
+     //Program State
+     private RoboSim current_sim;
+     private Timer ticker;
+
+     //GUI Components
+     private List playerList;
+     private Canvas canvas;
+     private TextField speed;
+     private TextField addPlayerField;
+     private Button reset, addPlayer, setSpeed, startstop;
+     
+     public SimulatorGUI(int gridX, int gridY, int bots_per_player, int obstacles) {
+         //Set up window
+         setSize(500,500);
+         addWindowListener(new WindowAdapter() {
+                   public void windowClosing(WindowEvent we) {
+                        dispose();
+                   }
+              });
+         
 		GridBagLayout gbl_panel = new GridBagLayout();
 		gbl_panel.columnWidths = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } ;
 		gbl_panel.rowHeights = new int[]{0, 0};
@@ -30,8 +50,8 @@ public class SimulatorGUI extends Frame
 		gbl_panel.rowWeights = new double[]{1.0, Double.MIN_VALUE};
 		setLayout(gbl_panel);
 		
-		List list = new List();
-		list.setPreferredSize(new Dimension(3, 8));;
+		playerList = new List();
+		playerList.setPreferredSize(new Dimension(3, 8));;
 		GridBagConstraints gbc_list = new GridBagConstraints();
 		gbc_list.fill = GridBagConstraints.BOTH;
 		gbc_list.insets = new Insets(5,5,5,5);
@@ -39,9 +59,9 @@ public class SimulatorGUI extends Frame
 		gbc_list.gridheight = 5;
 		gbc_list.gridx = 0;
 		gbc_list.gridy = 0;
-		add(list, gbc_list);
+		add(playerList, gbc_list);
 		
-		Canvas canvas = new Canvas() {
+		canvas = new Canvas() {
 			public void paint(Graphics g)
 			{
 				Rectangle r = getBounds();
@@ -59,7 +79,7 @@ public class SimulatorGUI extends Frame
 		gbc_canvas.gridy = 0;
 		add(canvas, gbc_canvas);
 		
-		TextField speed = new TextField();
+		speed = new TextField();
 		GridBagConstraints gbc_speed = new GridBagConstraints();
 		gbc_speed.insets = new Insets(0,0,0,5);
 		gbc_speed.fill = GridBagConstraints.BOTH;
@@ -69,9 +89,9 @@ public class SimulatorGUI extends Frame
 		gbc_speed.gridy = 5;
 		add(speed,gbc_speed);
 		
-		TextField field = new TextField();
-		field.setBounds(0,0,50,50);
-		field.setPreferredSize(new Dimension(20,20));
+		addPlayerField = new TextField();
+		addPlayerField.setBounds(0,0,50,50);
+		addPlayerField.setPreferredSize(new Dimension(20,20));
 		GridBagConstraints gbc_field = new GridBagConstraints();
 		gbc_field.fill = GridBagConstraints.BOTH;
 		gbc_field.insets = new Insets(0,5,0,5);
@@ -79,33 +99,40 @@ public class SimulatorGUI extends Frame
 		gbc_field.gridheight = 1;
 		gbc_field.gridx = 0;
 		gbc_field.gridy = 5;
-		add(field,gbc_field);
+		add(addPlayerField,gbc_field);
 		
-		Button reset = new Button("Reset");
+		reset = new Button("Reset");
 		GridBagConstraints gbc_reset = new GridBagConstraints();
 		gbc_reset.fill = GridBagConstraints.BOTH;
 		gbc_reset.gridx = 0;
 		gbc_reset.gridy = 6;
 		add(reset,gbc_reset);
+
+        //Reset button destroys everything
+        reset.addActionListener(new ActionListener() {
+                  public void actionPerformed(ActionEvent e)
+                       {
+                       }
+             });
 		
-		Button addplayer = new Button("Add Player");
+		addPlayer = new Button("Add Player");
 		GridBagConstraints gbc_player = new GridBagConstraints();
 		gbc_player.fill = GridBagConstraints.BOTH;
 		gbc_player.gridx = 1;
 		gbc_player.gridy = 6;
-		add(addplayer,gbc_player);
+		add(addPlayer,gbc_player);
 		
-		Button speedlabel = new Button("Speed");
-		speedlabel.setBounds(0,0,10,10);
+		setSpeed = new Button("Speed");
+		setSpeed.setBounds(0,0,10,10);
 		GridBagConstraints gbc_speedlabel = new GridBagConstraints();
 		gbc_speedlabel.fill = GridBagConstraints.BOTH;
 		gbc_speedlabel.gridwidth = 1;
 		gbc_speedlabel.gridheight = 1;
 		gbc_speedlabel.gridx = 2;
 		gbc_speedlabel.gridy = 6;
-		add(speedlabel,gbc_speedlabel);
+		add(setSpeed,gbc_speedlabel);
 
-		Button startstop = new Button("Play");
+		startstop = new Button("Play");
 		GridBagConstraints gbc_startstop = new GridBagConstraints();
 		gbc_startstop.fill = GridBagConstraints.BOTH;
 		gbc_startstop.gridx = 2;
