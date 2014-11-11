@@ -16,10 +16,14 @@
  * very non-native.  This is because Swing internally uses an AWT canvas for
  * everything and "paints" the buttons and other controls on it, instead of
  * using the OS to do this.  AWT instead uses the native OS controls, so it
- * should look like a normal program on whatever OS you run this on.
+ * should look like a normal program on whatever OS you run this on.<br><br>
+ *
+ * This is VERY rough at the moment ... I'm testing the logic code, so I
+ * only really wrote enough of the GUI frontend to be able to do that.
  */
 import java.awt.*;
 import java.awt.event.*;
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 public class SimulatorGUI extends Frame
 {
@@ -34,7 +38,21 @@ public class SimulatorGUI extends Frame
      private TextField addPlayerField;
      private Button reset, addPlayer, setSpeed, startstop;
      
-     public SimulatorGUI(int gridX, int gridY, int bots_per_player, int obstacles) {
+     //Parameters for RoboSim
+     private int initial_robots_per_combatant;
+     private int skill_points;
+     private int length;
+     private int width;
+     private int obstacles;
+
+     public SimulatorGUI(int gridX, int gridY, int skillz, int bots_per_player, int obstacles_) {
+          //Store RoboSim parameters
+          length=gridX;
+          width=gridY;
+          skill_points=skillz;
+          initial_robots_per_combatant = bots_per_player;
+          obstacles=obstacles_;
+
          //Set up window
          setSize(500,500);
          addWindowListener(new WindowAdapter() {
@@ -88,7 +106,7 @@ public class SimulatorGUI extends Frame
 		gbc_speed.gridx = 2;
 		gbc_speed.gridy = 5;
 		add(speed,gbc_speed);
-		
+
 		addPlayerField = new TextField();
 		addPlayerField.setBounds(0,0,50,50);
 		addPlayerField.setPreferredSize(new Dimension(20,20));
@@ -112,6 +130,10 @@ public class SimulatorGUI extends Frame
         reset.addActionListener(new ActionListener() {
                   public void actionPerformed(ActionEvent e)
                        {
+                            current_sim = null;
+                            ticker.stop();
+                            playerList.removeAll();
+                            canvas.repaint();
                        }
              });
 		
@@ -122,6 +144,15 @@ public class SimulatorGUI extends Frame
 		gbc_player.gridy = 6;
 		add(addPlayer,gbc_player);
 		
+        //Add Player button adds a player to the list
+        addPlayer.addActionListener(new ActionListener() {
+                  public void actionPerformed(ActionEvent e)
+                       {
+                            if(!addPlayerField.getText().equals(""))
+                                 playerList.add(addPlayerField.getText());
+                       }
+             });
+
 		setSpeed = new Button("Speed");
 		setSpeed.setBounds(0,0,10,10);
 		GridBagConstraints gbc_speedlabel = new GridBagConstraints();
@@ -132,17 +163,108 @@ public class SimulatorGUI extends Frame
 		gbc_speedlabel.gridy = 6;
 		add(setSpeed,gbc_speedlabel);
 
+        //Speed sets speed to new value
+        setSpeed.addActionListener(new ActionListener() {
+                  public void actionPerformed(ActionEvent e)
+                       {
+                            int newSpeed = 0;
+                            try
+                            {
+                                 newSpeed = Integer.parseInt(speed.getText());
+                            }
+                            catch(NumberFormatException ne)
+                            {
+                                 JOptionPane.showMessageDialog(null,"Invalid speed (not an integer)");
+                                 return;
+                            }
+
+                            if(newSpeed <= 0)
+                            {
+                                 JOptionPane.showMessageDialog(null,"Invalid speed (negative number)");
+                                 return;
+                            }
+
+                            boolean wasRunning = ticker.isRunning();
+                            if(wasRunning)
+                                 ticker.stop();
+                            ticker.setInitialDelay(newSpeed);
+                            ticker.setDelay(newSpeed);
+                            if(wasRunning)
+                                 ticker.restart();
+                       }
+             });
+
 		startstop = new Button("Play");
 		GridBagConstraints gbc_startstop = new GridBagConstraints();
 		gbc_startstop.fill = GridBagConstraints.BOTH;
 		gbc_startstop.gridx = 2;
 		gbc_startstop.gridy = 0;
 		add(startstop,gbc_startstop);
+
+        //Play button starts world by starting timer
+        startstop.addActionListener(new ActionListener() {
+                  public void actionPerformed(ActionEvent e)
+                       {
+                            if(!ticker.isRunning())
+                            {
+                                 if(current_sim==null)
+                                      try
+                                      {
+                                           current_sim = new RoboSim(playerList.getItems(),initial_robots_per_combatant,skill_points,length,width,obstacles);
+                                      }
+                                      catch(RoboSim.RoboSimExecutionException m)
+                                      {
+                                           JOptionPane.showMessageDialog(null,m.getMessage());
+                                      }
+                                 ticker.start();
+                                 startstop.setLabel("Pause");
+                            }
+                            else
+                            {
+                                 ticker.stop();
+                                 startstop.setLabel("Play");
+                            }
+                       }
+             });
+
+        //Set up timer
+        ticker = new Timer(999999, new ActionListener() {
+                  public void actionPerformed(ActionEvent e)
+                       {
+                            String ret = null;
+                            try
+                            {
+                                 ret = current_sim.executeSingleTimeStep();
+                            }
+                            catch(RoboSim.RoboSimExecutionException m)
+                            {
+                                 JOptionPane.showMessageDialog(null,m.getMessage());
+                                 ret=null;
+                                 ticker.stop();
+                            }
+                                 if(ret!=null)
+                                 {
+                                      ticker.stop();
+                                      JOptionPane.showMessageDialog(null,"The winner is: "+ret);
+                                 }
+                                 canvas.repaint();
+                       }
+             });
 	}
 	
 	public static void main(String[] args)
 	{
-		SimulatorGUI gui = new SimulatorGUI();
-		gui.setVisible(true);
+         int x=20, y=20, skill_points=20, bots_per_player=5, obstacles=30;
+         if(args.length==5)
+         {
+              x=Integer.parseInt(args[0]);
+              y=Integer.parseInt(args[1]);
+              skill_points=Integer.parseInt(args[2]);
+              bots_per_player=Integer.parseInt(args[3]);
+              obstacles=Integer.parseInt(args[4]);
+         }
+
+         SimulatorGUI gui = new SimulatorGUI(x,y,skill_points,bots_per_player,obstacles);
+         gui.setVisible(true);
 	}
 }

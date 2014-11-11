@@ -174,6 +174,7 @@ public class RoboSim
      public RoboSim(String[] combatants, int initial_robots_per_combatant, int skill_points, int length, int width, int obstacles) throws RoboSimExecutionException
           {
                //Create grid
+               worldGrid = new SimGridCell[length][];
                for(int i=0; i<length; i++)
                {
                     worldGrid[i] = new SimGridCell[width];
@@ -239,7 +240,7 @@ public class RoboSim
                          data.status = new Robot.Robot_Status();
                          data.status.charge = data.status.health = data.specs.power*10;
                          data.buffered_radio = new ArrayList<byte[]>();
-                         turnOrder.set(turnOrder_pos++,data);
+                         turnOrder.add(data);
                     }
                }
 
@@ -1017,8 +1018,10 @@ public class RoboSim
                     data.robot.act(student_api,clonedStatus,data.buffered_radio.toArray(new byte[0][]));
                }
                
-               if(turnOrder.size()==1)
-            	   return turnOrder.get(0).player;
-               return null;
+               String player = turnOrder.get(0).player;
+               for(int i=1; i<turnOrder.size(); i++)
+                    if(!turnOrder.get(i).player.equals(player))
+                         return null;
+               return player;
           }
 }

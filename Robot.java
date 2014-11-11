@@ -58,6 +58,9 @@ public interface Robot
            */
           public int[] capsules;
 
+          /**Constructor because I'd rather not capsules ever be null*/
+          public Robot_Status() { capsules = new int[0]; }
+
           /**Overrides clone: see Java language documentation for explanation*/
           public Object clone() throws CloneNotSupportedException
                {
