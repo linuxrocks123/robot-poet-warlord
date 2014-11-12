@@ -8,6 +8,12 @@ Primary Attributes:
 - Power (0-10)
 - Health/Charge (0-10)
 
+Each turn:
+- Robot has maximum HP of 10*charge skill.
+- Robot gains power equal to charge skill each turn.
+- Each turn, robot can use up to power skill points each turn to do
+  any combination of activities.
+
 Attacks:
 - Melee: 50% + (Attack - Defense) chance of hitting
          Amount of power put into attack determines damage and
@@ -27,7 +33,7 @@ Attacks:
     down.
   - Range is (power of capsule + defense level).  No ranged penalty.
   - Attack skill is (power of capsule + attack level).
-  - Can only hold a number of capsules equal to defense skill.
+  - Can only hold a number of capsules equal to (attack+defense).
 - Destroy wall/fortification: Wall has 10 health and 10 defense.  Can
   use any method to destroy wall/fortification (melee, ranged,
   capsule).
@@ -73,6 +79,8 @@ Radio:
   - 1 Power to scan visible enemy.  Range is equal to defense skill.
     Can't be jammed.
 
+NOTE: JAMMING NOT IMPLEMENTED
+*******
 Jamming:
   - 1 power to jam at 1 power.
   - 1 power to to overcome jamming at 1 power.
@@ -95,9 +103,3 @@ Jamming:
     tile and jamming at receiving tile.
   - Receiver and sender can both spend extra power to try and overcome
     jamming.
-
-Each turn:
-- Robot has maximum HP of 10*charge skill.
-- Robot gains power equal to charge skill each turn.
-- Each turn, robot can use up to power skill points each turn to do
-  any combination of activities.

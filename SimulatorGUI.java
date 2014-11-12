@@ -82,9 +82,16 @@ public class SimulatorGUI extends Frame
 		canvas = new Canvas() {
 			public void paint(Graphics g)
 			{
-				Rectangle r = getBounds();
-				g.drawRect(1, 1, 30, r.height/2);
-			
+                 //Get bounds of rid
+                 Rectangle r = getBounds();
+                 int cell_length = r.width/length;
+                 int cell_height = r.height/width;
+
+                 //Draw grid
+                 for(int i=0; i<=length; i++)
+                      g.drawLine(0,cell_height*i,cell_length*length,cell_height*i);
+                 for(int i=0; i<=width; i++)
+                      g.drawLine(cell_length*i,0,cell_length*i,cell_height*width);
 			}
 		};
 		canvas.setBounds(0, 0, 50, 50);

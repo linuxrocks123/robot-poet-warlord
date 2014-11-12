@@ -86,7 +86,7 @@ public class RoboSim
      }
 
      //RoboSim environmental constants
-     private final int WALL_HEALTH = 50;
+     private final int WALL_HEALTH = 10;
      private final int WALL_DEFENSE = 10;
 
      //RoboSim execution data (world grid, turn order, GUI reference, etc.)
@@ -726,15 +726,21 @@ public class RoboSim
                     switch(actingRobot.whatBuilding)
                     {
                     case WALL:
-                         if(actingRobot.investedPower >= WALL_HEALTH)
+                         if(actingRobot.investedPower >= 50)
+                         {
                               actingRobot.invested_assoc_cell.contents = Robot.GridObject.WALL;
+                              actingRobot.invested_assoc_cell.wallforthealth = WALL_HEALTH;
+                         }
                          else
                               actingRobot.invested_assoc_cell.contents = Robot.GridObject.EMPTY;
                          break;
 
                     case FORT:
                          if(actingRobot.investedPower >= 75)
+                         {
                               actingRobot.invested_assoc_cell.contents = Robot.GridObject.FORT;
+                              actingRobot.invested_assoc_cell.wallforthealth = WALL_HEALTH;
+                         }
                          else
                               actingRobot.invested_assoc_cell.contents = Robot.GridObject.EMPTY;
                          break;
