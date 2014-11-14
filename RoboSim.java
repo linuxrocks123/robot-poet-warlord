@@ -95,6 +95,17 @@ public class RoboSim
      private int turnOrder_pos;
      private SimulatorGUI gui;
 
+     /**This is so SimulatorGUI can get a copy of world*/
+     public Robot.GridCell[][] getWorldGrid() { return worldGrid; }
+
+     /**SimulatorGUI needs to see who owns the robots in the cells
+      * This is a hack to allow this by downcasting the passed GridCell
+      * to SimGridCell and extracting the data.*/
+     public String getOccupantPlayer(Robot.GridCell to_convert)
+          {
+               return ((SimGridCell)(to_convert)).occupant_data.player;
+          }
+
      //Always good to have an RNG handy
      Random generator;
 

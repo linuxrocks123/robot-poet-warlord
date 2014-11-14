@@ -92,6 +92,67 @@ public class SimulatorGUI extends Frame
                       g.drawLine(0,cell_height*i,cell_length*length,cell_height*i);
                  for(int i=0; i<=width; i++)
                       g.drawLine(cell_length*i,0,cell_length*i,cell_height*width);
+
+                 //If there's no current sim, we need to exit now
+                 if(current_sim==null)
+                      return;
+
+                 //Generate color mapping
+                 HashMap<String,Color> colorMap = new HashMap<String,Color>();
+                 Color current_color = Color.BLACK;
+                 for(String x : playerList.getItems())
+                 {
+                      //Update color
+                      if(current_color.equals(Color.BLACK))
+                           current_color = Color.RED;
+                      else if(current_color.equals(Color.RED))
+                           current_color = Color.PINK;
+                      else if(current_color.equals(Color.PINK))
+                           current_color = Color.ORANGE;
+                      else if(current_color.equals(Color.ORANGE))
+                           current_color = Color.YELLOW;
+                      else if(current_color.equals(Color.YELLOW))
+                           current_color = Color.GREEN;
+                      else if(current_color.equals(Color.GREEN))
+                           current_color = Color.MAGENTA;
+                      else if(current_color.equals(Color.MAGENTA))
+                           current_color = Color.CYAN;
+                      else if(current_color.equals(Color.CYAN))
+                           current_color = Color.BLUE;
+                      else if(current_color.equals(Color.BLUE))
+                           current_color = Color.LIGHT_GRAY;
+                      else if(current_color.equals(Color.LIGHT_GRAY))
+                           current_color = Color.GRAY;
+                      else if(current_color.equals(Color.GRAY))
+                           current_color = Color.DARK_GRAY;
+                      else if(current_color.equals(Color.DARK_GRAY))
+                           current_color = Color.PINK;
+
+                      //Add mapping
+                      colorMap.put(x,current_color);
+                 }
+
+                 //Iterate over RoboSim grid and "paint" squares that need to be painted
+                 Robot.GridCell[][] world = current_sim.getWorldGrid();
+                 for(int i=0; i<length; i++)
+                      for(int j=0; j<width; j++)
+                           switch(world[i][j].contents)
+                           {
+                           case BLOCKED:
+                                //Draw a black 'X' in the cell
+                                g.setColor(Color.BLACK);
+                                g.drawLine(i*cell_length,j*cell_height,(i+1)*cell_length,(j+1)*cell_height);
+                                g.drawLine(i*cell_length,(j+1)*cell_height,(i+1)*cell_length,j*cell_height);
+                                break;
+                           case SELF:
+                                //Fill rectangle with color representing player
+                                g.setColor(colorMap.get(current_sim.getOccupantPlayer(world[i][j])));
+                                g.fillRect(i*cell_length,j*cell_height,cell_length,cell_height);
+                                break;
+                           case WALL: //TODO
+                           case FORT: //TODO
+                           case CAPSULE: //TODO
+                 
 			}
 		};
 		canvas.setBounds(0, 0, 50, 50);
