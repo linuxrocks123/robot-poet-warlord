@@ -171,7 +171,7 @@ public interface WorldAPI
       * @return a 2-dimensional array containing a GridCell for each cell
       *         visible to the robot.
       */
-     Robot.GridCell[][] getVisibleNeighborhood() throws RoboSim.RoboSimExecutionException;
+     Robot.GridCell[][] getVisibleNeighborhood();
 
      /**
       * Gets a copy of the entire world.  Takes 3 power, plus additional if

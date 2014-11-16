@@ -25,6 +25,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
+import java.util.HashMap;
 public class SimulatorGUI extends Frame
 {
      //Program State
@@ -149,12 +150,44 @@ public class SimulatorGUI extends Frame
                                 g.setColor(colorMap.get(current_sim.getOccupantPlayer(world[i][j])));
                                 g.fillRect(i*cell_length,j*cell_height,cell_length,cell_height);
                                 break;
-                           case WALL: //TODO
-                           case FORT: //TODO
-                           case CAPSULE: //TODO
-                 
+                           case WALL:
+                                g.setColor(Color.BLACK);
+                                g.fillRect(i*cell_length,j*cell_height,cell_length,cell_height);
+                                break;
+                           case FORT:
+                                g.setColor(Color.BLACK);
+                                switch(world[i][j].fort_orientation)
+                                {
+                                case UP:
+                                     g.drawLine((int)((i+0.5)*cell_length),(j+1)*cell_height,(int)((i+0.5)*cell_length),j*cell_height);
+                                     g.drawLine((int)((i+0.5)*cell_length),j*cell_height,i*cell_length,(j+1)*cell_height);
+                                     g.drawLine((int)((i+0.5)*cell_length),j*cell_height,(i+1)*cell_length,(j+1)*cell_height);
+                                     break;
+                                case DOWN:
+                                     g.drawLine((int)((i+0.5)*cell_length),(j+1)*cell_height,(int)((i+0.5)*cell_length),j*cell_height);
+                                     g.drawLine((int)((i+0.5)*cell_length),(j+1)*cell_height,i*cell_length,j*cell_height);
+                                     g.drawLine((int)((i+0.5)*cell_length),(j+1)*cell_height,(i+1)*cell_length,j*cell_height);
+                                     break;
+                                case LEFT:
+                                     g.drawLine(i*cell_length,(int)((j+0.5)*cell_height),(i+1)*cell_length,(int)((j+0.5)*cell_height));
+                                     g.drawLine((i+1)*cell_length,(int)((j+0.5)*cell_height),i*cell_length,j*cell_height);
+                                     g.drawLine((i+1)*cell_length,(int)((j+0.5)*cell_height),i*cell_length,(j+1)*cell_height);
+                                     break;
+                                case RIGHT:
+                                     g.drawLine(i*cell_length,(int)((j+0.5)*cell_height),(i+1)*cell_length,(int)((j+0.5)*cell_height));
+                                     g.drawLine(i*cell_length,(int)((j+0.5)*cell_height),(i+1)*cell_length,j*cell_height);
+                                     g.drawLine(i*cell_length,(int)((j+0.5)*cell_height),(i+1)*cell_length,(j+1)*cell_height);
+                                     break;
+                                }
+                                break;
+                           case CAPSULE:
+                                g.setColor(Color.BLACK);
+                                g.drawOval(i*cell_length,j*cell_height,cell_length,cell_height);
+                                break;
+                           }
 			}
 		};
+
 		canvas.setBounds(0, 0, 50, 50);
 		canvas.setBackground(Color.WHITE);
 		GridBagConstraints gbc_canvas = new GridBagConstraints();

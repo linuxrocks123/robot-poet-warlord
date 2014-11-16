@@ -140,7 +140,7 @@ public class RoboSim
           {
                Robot.GridCell[][] to_return = new Robot.GridCell[simgrid.length][simgrid[0].length];
                for(int i=0; i<simgrid.length; i++)
-                    for(int j=0; j<simgrid.length; j++)
+                    for(int j=0; j<simgrid[0].length; j++)
                     {
                     	SimGridCell sanitized;
                     	try
@@ -588,6 +588,9 @@ public class RoboSim
 
           public void move(int steps, Robot.Direction way) throws RoboSimExecutionException
                {
+                    if(steps<1)
+                         return;
+
                     int x_coord = actingRobot.assoc_cell.x_coord;
                     final int actor_x = x_coord;
                     int y_coord = actingRobot.assoc_cell.y_coord;
@@ -595,10 +598,10 @@ public class RoboSim
                     switch(way)
                     {
                     case UP:
-                         y_coord+=steps;
+                         y_coord-=steps;
                          break;
                     case DOWN:
-                         y_coord-=steps;
+                         y_coord+=steps;
                          break;
                     case LEFT:
                          x_coord-=steps;
@@ -612,13 +615,29 @@ public class RoboSim
                     if(x_coord < 0 || x_coord > worldGrid.length || y_coord < 0 || y_coord > worldGrid[0].length)
                          throw new RoboSimExecutionException("attempted to move out of bounds",actingRobot.player,actingRobot.assoc_cell);
 
+                    //Is our destination empty?
+                    if(worldGrid[x_coord][y_coord].contents!=Robot.GridObject.EMPTY && worldGrid[x_coord][y_coord].contents!=Robot.GridObject.FORT)
+                         throw new RoboSimExecutionException("attempted to move onto illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+
+                    //Are we approaching the fort from the right angle?
+                    if(worldGrid[x_coord][y_coord].contents==Robot.GridObject.FORT && worldGrid[x_coord][y_coord].fort_orientation!=way)
+                         throw new RoboSimExecutionException("attempted to move onto a fort from an illegal direction",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+
                     //Okay, now we have to make sure each step is empty
                     final boolean x_left = x_coord<actor_x;
                     final boolean y_left = y_coord<actor_y;
                     if(x_coord!=actor_x)
+                    {
                          for(int i=(x_left ? actor_x-1 : actor_x+1); i!=x_coord; i=(x_left ? i-1 : i+1))
-                              if(worldGrid[x_coord][y_coord].contents!=Robot.GridObject.EMPTY)
-                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+                              if(worldGrid[i][y_coord].contents!=Robot.GridObject.EMPTY)
+                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[i][y_coord]);
+                    }
+                    else
+                    {
+                         for(int i=(y_left ? actor_y-1 : actor_y+1); i!=y_coord; i=(y_left ? i-1 : i+1))
+                              if(worldGrid[x_coord][i].contents!=Robot.GridObject.EMPTY)
+                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][i]);
+                    }
 
                     //Okay, now: do we have enough power/charge?
                     if(steps > actingRobot.status.power)
