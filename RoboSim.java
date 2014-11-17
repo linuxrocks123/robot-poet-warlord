@@ -350,7 +350,8 @@ public class RoboSim
                          {
                               //we're a robot
                               for(int i=0; true; i++)
-                                        if(turnOrder.get(i)==cell_to_attack.occupant_data.robot)
+                                        if(turnOrder.get(i)==cell_to_attack.occupant_data)
+                                        {
                                              if((cell_to_attack.occupant_data.status.health-=power)<=0)
                                              {
                                                   //We destroyed the opponent!
@@ -367,9 +368,9 @@ public class RoboSim
                                                   turnOrder.remove(i);
                                                   if(i<turnOrder_pos)
                                                        turnOrder_pos--;
-
-                                                  break;
                                              }
+                                             break;
+                                        }
                          }
                          else
                               if((cell_to_attack.wallforthealth-=power)<=0)
@@ -418,6 +419,7 @@ public class RoboSim
                     case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                         break;
                     case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case ALLY:
@@ -484,6 +486,7 @@ public class RoboSim
                     case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                         break;
                     case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case ALLY:
@@ -547,6 +550,7 @@ public class RoboSim
                     case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                         break;
                     case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case ALLY:
@@ -1038,6 +1042,9 @@ public class RoboSim
                     /*We can spend up to status.power power this turn, but
                      *no more than our current charge level*/
                     data.status.power = Math.min(data.specs.power, data.status.charge);
+
+                    //Defense boost reset to zero at beginning of turn
+                    data.status.defense_boost = 0;
 
                     //Clone status for student
                     Robot.Robot_Status clonedStatus;
