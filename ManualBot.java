@@ -1,6 +1,7 @@
 /**ManualBot:
- * Robot implementation which asks the user for everything.<br>
- * This is VERY rough at the moment.
+ * Robot implementation which asks the user for everything.<br><br>
+ * Currently supported commands:
+ * move, meleeAttack, rangedAttack, done
  */
 import java.util.Scanner;
 public class ManualBot implements Robot
@@ -87,10 +88,9 @@ public class ManualBot implements Robot
 
      public void act(WorldAPI api, Robot_Status status, byte[][] received_radio)
           {
-               int x_coord = 0, y_coord = 0;
                GridCell[][] neighborhood = api.getVisibleNeighborhood();
                GridCell self = dumpGrid(neighborhood);
-               System.out.println("ManualBot at ("+self.x_coord+","+self.y_coord+"):\n? ");
+               System.out.print("ManualBot at ("+self.x_coord+","+self.y_coord+"):\n? ");
                String command = scanner.next();
                while(!command.equalsIgnoreCase("done"))
                {
@@ -127,11 +127,32 @@ public class ManualBot implements Robot
                               System.out.print("Power? ");
                               int power = scanner.nextInt();
 
-                              AttackResult result;
+                              AttackResult result = null;
                               if(typ.equalsIgnoreCase("melee"))
-                                   result = meleeAttack(power,neighborhood[x_coord - neighborhood[0][0].x_coord][y_coord - neighborhood[0][0].y_coord]);
+                                   result = api.meleeAttack(power,neighborhood[x_coord - neighborhood[0][0].x_coord][y_coord - neighborhood[0][0].y_coord]);
                               else if(typ.equalsIgnoreCase("ranged"))
-                                   result = rangedAttack(power,neighborhood[x_coord - neighborhood[0][0].x_coord][y_coord - neighborhood[0][0].y_coord]);
+                                   result = api.rangedAttack(power,neighborhood[x_coord - neighborhood[0][0].x_coord][y_coord - neighborhood[0][0].y_coord]);
+
+                              if(result!=null)
+                                   System.out.println(result.toString());
+                         }
+                         else if(command.equalsIgnoreCase("scan"))
+                         {
+                              Robot_Specs returnedSpecs = new Robot_Specs();
+                              Robot_Status returnedStatus = new Robot_Status();
+                              System.out.print("Location x y? ");
+                              int x_coord = scanner.nextInt();
+                              int y_coord = scanner.nextInt();
+                              api.scanEnemy(returnedSpecs,returnedStatus,neighborhood[x_coord - neighborhood[0][0].x_coord][y_coord - neighborhood[0][0].y_coord]);
+
+                              System.out.println("Specs/Attack: "+returnedSpecs.attack);
+                              System.out.println("Specs/Defense: "+returnedSpecs.defense);
+                              System.out.println("Specs/Power: "+returnedSpecs.power);
+                              System.out.println("Specs/Charge: "+returnedSpecs.charge);
+                              System.out.println("Status/Power: "+returnedStatus.power);
+                              System.out.println("Status/Charge: "+returnedStatus.charge);
+                              System.out.println("Status/Health: "+returnedStatus.health);
+                              System.out.println("Status/DefenseBoost: "+returnedStatus.defense_boost);
                          }
                     }
                     catch(RoboSim.RoboSimExecutionException e)
