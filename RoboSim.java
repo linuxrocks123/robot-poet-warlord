@@ -984,7 +984,7 @@ public class RoboSim
                     if(power!=3)
                          throw new RoboSimExecutionException("tried to get world with invalid power (not equal to 3)",actingRobot.player,actingRobot.assoc_cell);
 
-                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length,worldGrid[0].length),actingRobot.player);
+                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length-1,worldGrid[0].length-1),actingRobot.player);
 
                     //Set self to self instead of ally
                     to_return[actingRobot.assoc_cell.x_coord][actingRobot.assoc_cell.y_coord].contents=Robot.GridObject.SELF;
