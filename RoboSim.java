@@ -95,6 +95,17 @@ public class RoboSim
      private int turnOrder_pos;
      private SimulatorGUI gui;
 
+     /**This is so SimulatorGUI can get a copy of world*/
+     public Robot.GridCell[][] getWorldGrid() { return worldGrid; }
+
+     /**SimulatorGUI needs to see who owns the robots in the cells
+      * This is a hack to allow this by downcasting the passed GridCell
+      * to SimGridCell and extracting the data.*/
+     public String getOccupantPlayer(Robot.GridCell to_convert)
+          {
+               return ((SimGridCell)(to_convert)).occupant_data.player;
+          }
+
      //Always good to have an RNG handy
      Random generator;
 
@@ -129,7 +140,7 @@ public class RoboSim
           {
                Robot.GridCell[][] to_return = new Robot.GridCell[simgrid.length][simgrid[0].length];
                for(int i=0; i<simgrid.length; i++)
-                    for(int j=0; j<simgrid.length; j++)
+                    for(int j=0; j<simgrid[0].length; j++)
                     {
                     	SimGridCell sanitized;
                     	try
@@ -339,7 +350,8 @@ public class RoboSim
                          {
                               //we're a robot
                               for(int i=0; true; i++)
-                                        if(turnOrder.get(i)==cell_to_attack.occupant_data.robot)
+                                        if(turnOrder.get(i)==cell_to_attack.occupant_data)
+                                        {
                                              if((cell_to_attack.occupant_data.status.health-=power)<=0)
                                              {
                                                   //We destroyed the opponent!
@@ -356,9 +368,9 @@ public class RoboSim
                                                   turnOrder.remove(i);
                                                   if(i<turnOrder_pos)
                                                        turnOrder_pos--;
-
-                                                  break;
                                              }
+                                             break;
+                                        }
                          }
                          else
                               if((cell_to_attack.wallforthealth-=power)<=0)
@@ -407,6 +419,7 @@ public class RoboSim
                     case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                         break;
                     case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case ALLY:
@@ -473,6 +486,7 @@ public class RoboSim
                     case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                         break;
                     case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case ALLY:
@@ -536,6 +550,7 @@ public class RoboSim
                     case SELF:
                          if(cell_to_attack.occupant_data.player.equals(actingRobot.player))
                               throw new RoboSimExecutionException("attempted to attack ally",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
+                         break;
                     case CAPSULE:
                          throw new RoboSimExecutionException("attempted to attack energy capsule",actingRobot.player,actingRobot.assoc_cell,cell_to_attack);
                     case ALLY:
@@ -577,6 +592,9 @@ public class RoboSim
 
           public void move(int steps, Robot.Direction way) throws RoboSimExecutionException
                {
+                    if(steps<1)
+                         return;
+
                     int x_coord = actingRobot.assoc_cell.x_coord;
                     final int actor_x = x_coord;
                     int y_coord = actingRobot.assoc_cell.y_coord;
@@ -584,10 +602,10 @@ public class RoboSim
                     switch(way)
                     {
                     case UP:
-                         y_coord+=steps;
+                         y_coord-=steps;
                          break;
                     case DOWN:
-                         y_coord-=steps;
+                         y_coord+=steps;
                          break;
                     case LEFT:
                          x_coord-=steps;
@@ -601,13 +619,29 @@ public class RoboSim
                     if(x_coord < 0 || x_coord > worldGrid.length || y_coord < 0 || y_coord > worldGrid[0].length)
                          throw new RoboSimExecutionException("attempted to move out of bounds",actingRobot.player,actingRobot.assoc_cell);
 
+                    //Is our destination empty?
+                    if(worldGrid[x_coord][y_coord].contents!=Robot.GridObject.EMPTY && worldGrid[x_coord][y_coord].contents!=Robot.GridObject.FORT)
+                         throw new RoboSimExecutionException("attempted to move onto illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+
+                    //Are we approaching the fort from the right angle?
+                    if(worldGrid[x_coord][y_coord].contents==Robot.GridObject.FORT && worldGrid[x_coord][y_coord].fort_orientation!=way)
+                         throw new RoboSimExecutionException("attempted to move onto a fort from an illegal direction",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+
                     //Okay, now we have to make sure each step is empty
                     final boolean x_left = x_coord<actor_x;
                     final boolean y_left = y_coord<actor_y;
                     if(x_coord!=actor_x)
+                    {
                          for(int i=(x_left ? actor_x-1 : actor_x+1); i!=x_coord; i=(x_left ? i-1 : i+1))
-                              if(worldGrid[x_coord][y_coord].contents!=Robot.GridObject.EMPTY)
-                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][y_coord]);
+                              if(worldGrid[i][y_coord].contents!=Robot.GridObject.EMPTY)
+                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[i][y_coord]);
+                    }
+                    else
+                    {
+                         for(int i=(y_left ? actor_y-1 : actor_y+1); i!=y_coord; i=(y_left ? i-1 : i+1))
+                              if(worldGrid[x_coord][i].contents!=Robot.GridObject.EMPTY)
+                                   throw new RoboSimExecutionException("attempted to cross illegal cell",actingRobot.player,actingRobot.assoc_cell,worldGrid[x_coord][i]);
+                    }
 
                     //Okay, now: do we have enough power/charge?
                     if(steps > actingRobot.status.power)
@@ -950,7 +984,7 @@ public class RoboSim
                     if(power!=3)
                          throw new RoboSimExecutionException("tried to get world with invalid power (not equal to 3)",actingRobot.player,actingRobot.assoc_cell);
 
-                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length,worldGrid[0].length),actingRobot.player);
+                    Robot.GridCell[][] to_return = sanitizeGrid(getSubGrid(0,0,worldGrid.length-1,worldGrid[0].length-1),actingRobot.player);
 
                     //Set self to self instead of ally
                     to_return[actingRobot.assoc_cell.x_coord][actingRobot.assoc_cell.y_coord].contents=Robot.GridObject.SELF;
@@ -1008,6 +1042,9 @@ public class RoboSim
                     /*We can spend up to status.power power this turn, but
                      *no more than our current charge level*/
                     data.status.power = Math.min(data.specs.power, data.status.charge);
+
+                    //Defense boost reset to zero at beginning of turn
+                    data.status.defense_boost = 0;
 
                     //Clone status for student
                     Robot.Robot_Status clonedStatus;

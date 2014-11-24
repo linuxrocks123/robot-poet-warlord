@@ -215,7 +215,7 @@ public interface Robot
                            (-1,0),(1,0),(0,-1),(0,1)*/
                          LinkedList<GridCell> adjacent_nodes = new LinkedList<GridCell>();
                          int gridX_value = our_cell.x_coord - x_offset;
-                         int gridY_value = our_cell.y_coord - x_offset;
+                         int gridY_value = our_cell.y_coord - y_offset;
                          if(gridX_value!=0)
                               adjacent_nodes.add(grid[gridX_value-1][gridY_value]);
                          if(gridX_value!=grid.length-1)
