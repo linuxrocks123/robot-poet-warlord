@@ -1,4 +1,4 @@
-/**
+\/**
  * RoboSim: Main simulator logic class.
  */
 import java.util.ArrayList;
@@ -182,7 +182,7 @@ public class RoboSim
       * @param width width of arena
       * @param obstacles number of obstacles on battlefield
       */
-     public RoboSim(String[] combatants, int initial_robots_per_combatant, int skill_points, int length, int width, int obstacles) throws RoboSimExecutionException
+     public RoboSim(/*String[] combatants,*/ int initial_robots_per_combatant, int skill_points, int length, int width, int obstacles) throws RoboSimExecutionException
           {
                //Create grid
                worldGrid = new SimGridCell[length][];
@@ -249,7 +249,7 @@ public class RoboSim
                          creation_message[0] = (byte)(turnOrder_pos / 256);
                          data.specs = checkSpecsValid(data.robot.createRobot(null, skill_points, creation_message), player, skill_points);
                          data.status = new Robot.Robot_Status();
-                         data.status.charge = data.status.health = data.specs.power*10;
+                         data.status.charge = data.status.health = data.specs.charge*10;
                          data.buffered_radio = new ArrayList<byte[]>();
                          turnOrder.add(data);
                     }
@@ -1059,6 +1059,7 @@ public class RoboSim
 
                     //Run student code
                     data.robot.act(student_api,clonedStatus,data.buffered_radio.toArray(new byte[0][]));
+                    data.buffered_radio.clear()
                }
                
                String player = turnOrder.get(0).player;

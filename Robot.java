@@ -199,6 +199,8 @@ public interface Robot
                     {
                          Map.Entry<Integer,LinkedList<GridCell>> current_entry = unvisited_nodes.firstEntry();
                          int our_cost = current_entry.getKey();
+                         //Note: the below line is far, FAR too clever.
+                         //It secretly uses Java object aliases to delete origin from origin path.
                          GridCell our_cell = current_entry.getValue().pop();
                          LinkedList<GridCell> current_path = current_costs.get(our_cell);
 

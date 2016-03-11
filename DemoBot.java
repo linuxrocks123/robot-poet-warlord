@@ -47,6 +47,7 @@ public class DemoBot implements Robot
      
      private static int searchAndDestroy(GridCell self, GridCell[][] neighbors,WorldAPI api,int remaining_power) throws RoboSim.RoboSimExecutionException
           {
+               System.out.println("Self: ("+self.x_coord+","+self.y_coord+")");
                for(int i=0; i<neighbors.length; i++)
                     for(int j=0; j<neighbors[0].length; j++)
                          if(neighbors[i][j].contents==GridObject.ENEMY)
@@ -55,6 +56,7 @@ public class DemoBot implements Robot
                               if(path!=null)
                                    for(int k=0; k<path.length-1 && remaining_power > 0; k++)
                                    {
+                                        System.out.println("Move: ("+path[k].x_coord+","+path[k].y_coord+")");
                                         Direction way = null;
                                         if(path[k].x_coord < self.x_coord)
                                              way = Direction.LEFT;
